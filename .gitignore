@@ -4,3 +4,8 @@
 .env.production
 .env.development
 .envrc
+
+# Wrangler generated files
+.wrangler/
+dist/
+node_modules/

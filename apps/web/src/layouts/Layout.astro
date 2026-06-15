@@ -1,0 +1,54 @@
+---
+import '../styles/global.css';
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { 
+	title = "Dashboard Wakaf Nasional | Asosiasi Nazhir Indonesia",
+	description = "Transformasi digital tata kelola wakaf menuju Smart Nazhir Ecosystem 2030. Laporan aset terintegrasi dan akuntabel."
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="id" class="dark">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="generator" content={Astro.generator} />
+		
+		<!-- Primary Meta Tags -->
+		<title>{title}</title>
+		<meta name="title" content={title} />
+		<meta name="description" content={description} />
+		
+		<!-- Google Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+		
+		<style>
+			html,
+			body {
+				margin: 0;
+				width: 100%;
+				height: 100%;
+				font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+			}
+		</style>
+	</head>
+	<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-emerald-500/30 selection:text-emerald-300 overflow-x-hidden">
+		<!-- Background Glows -->
+		<div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+			<div class="absolute -top-[40%] -left-[20%] w-[80%] h-[80%] rounded-full bg-emerald-950/30 blur-[150px] mix-blend-screen"></div>
+			<div class="absolute -bottom-[40%] -right-[20%] w-[80%] h-[80%] rounded-full bg-teal-950/20 blur-[150px] mix-blend-screen"></div>
+		</div>
+		<div class="relative z-10 min-h-screen flex flex-col justify-between">
+			<slot />
+		</div>
+	</body>
+</html>

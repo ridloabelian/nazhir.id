@@ -14,8 +14,21 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^13.6.1",
+    "@astrojs/react": "^5.0.7",
+    "@lucia-auth/adapter-postgresql": "^3.1.2",
+    "@tailwindcss/vite": "^4.3.0",
+    "@trpc/client": "^11.17.0",
+    "@trpc/server": "^11.17.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "astro": "^6.4.4",
-    "wrangler": "^4.98.0"
+    "lucia": "^3.2.2",
+    "postgres": "^3.4.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.0",
+    "wrangler": "^4.98.0",
+    "zod": "^4.4.3"
   },
   "overrides": {
     "vite": "^7"

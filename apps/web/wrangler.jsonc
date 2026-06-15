@@ -1,6 +1,6 @@
 {
 	"compatibility_date": "2026-06-08",
-	"compatibility_flags": ["global_fetch_strictly_public"],
+	"compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
 	"name": "apps-web",
 	"main": "@astrojs/cloudflare/entrypoints/server",
 	"assets": {
@@ -9,5 +9,21 @@
 	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	"r2_buckets": [
+		{
+			"binding": "R2_BUCKET",
+			"bucket_name": "laporan-wakaf"
+		}
+	],
+	"routes": [
+		{
+			"pattern": "nazhir.id",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.nazhir.id",
+			"custom_domain": true
+		}
+	]
 }

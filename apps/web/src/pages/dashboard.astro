@@ -1,0 +1,154 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { env } from 'cloudflare:workers';
+import { getDB } from '../db';
+import { getLucia } from '../auth';
+import TransactionDashboard from '../components/TransactionDashboard';
+
+// SSR: Cek otentikasi
+const isProd = import.meta.env.PROD;
+const sql = getDB(env as any);
+const lucia = getLucia(sql, isProd);
+
+const sessionId = Astro.cookies.get(lucia.sessionCookieName)?.value;
+
+if (!sessionId) {
+	return Astro.redirect('/');
+}
+
+let user = null;
+let session = null;
+
+try {
+	const result = await lucia.validateSession(sessionId);
+	user = result.user;
+	session = result.session;
+} catch (e) {
+	// Sesi tidak valid
+}
+
+if (!user) {
+	return Astro.redirect('/');
+}
+
+// Ambil profil Nazhir
+let nazhir = null;
+if (user.nazhirId) {
+	const [nazhirProfile] = await sql`
+		SELECT id, nama_lembaga, no_reg_bwi, alamat, telepon, status_verifikasi, created_at
+		FROM nazhir
+		WHERE id = ${user.nazhirId}
+		LIMIT 1
+	`;
+	nazhir = nazhirProfile || null;
+}
+---
+
+<Layout title="Dashboard Nazhir | Smart Nazhir Ecosystem 2030">
+	<!-- Header -->
+	<header class="w-full border-b border-slate-900 bg-slate-950/40 backdrop-blur-md sticky top-0 z-50">
+		<div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+			<div class="flex items-center gap-2">
+				<div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center">
+					<span class="font-extrabold text-slate-950 text-base">N</span>
+				</div>
+				<span class="font-bold text-lg text-white">nazhir<span class="text-emerald-400">.id</span></span>
+			</div>
+			
+			<div class="flex items-center gap-4">
+				<div class="text-right hidden sm:block">
+					<div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">{user.role}</div>
+					<div class="text-sm font-medium text-slate-200">{user.email}</div>
+				</div>
+				<button 
+					id="btn-logout"
+					class="px-4 py-2 bg-slate-900 hover:bg-rose-950/30 hover:text-rose-400 border border-slate-800 hover:border-rose-500/20 text-slate-300 font-semibold rounded-lg text-xs transition duration-200 cursor-pointer"
+				>
+					Keluar
+				</button>
+			</div>
+		</div>
+	</header>
+
+	<main class="w-full max-w-7xl mx-auto px-6 py-12 flex-1 space-y-8">
+		
+		<!-- Welcome Banner -->
+		<div class="p-8 rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-900 to-slate-950/80 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+			<!-- Banner decoration -->
+			<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-2xl"></div>
+			
+			<div>
+				<h2 class="text-2xl font-bold text-white mb-2">Selamat Datang di Portal Nazhir</h2>
+				<p class="text-slate-400 text-sm max-w-xl">
+					Ini adalah panel pengelolaan aset dan pelaporan keuangan terpadu untuk Smart Nazhir Ecosystem 2030.
+				</p>
+			</div>
+			<div class="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-bold uppercase tracking-wider">
+				{nazhir ? nazhir.status_verifikasi : 'TIDAK TERDAFTAR'}
+			</div>
+		</div>
+
+		<!-- Dashboard Grid -->
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+			
+			<!-- Left: Profil Lembaga -->
+			<div class="lg:col-span-1 border border-slate-900 bg-slate-950/20 rounded-xl p-6 space-y-6">
+				<h3 class="text-lg font-bold text-white border-b border-slate-900 pb-3 flex items-center gap-2">
+					<svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+					</svg>
+					Profil Lembaga
+				</h3>
+				{nazhir ? (
+					<div class="space-y-4 text-sm">
+						<div>
+							<div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Nama Lembaga</div>
+							<div class="text-slate-200 font-medium">{nazhir.nama_lembaga}</div>
+						</div>
+						<div>
+							<div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Nomor Registrasi BWI</div>
+							<div class="text-slate-200 font-mono">{nazhir.no_reg_bwi}</div>
+						</div>
+						<div>
+							<div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Alamat</div>
+							<div class="text-slate-400 leading-relaxed">{nazhir.alamat}</div>
+						</div>
+						{nazhir.telepon && (
+							<div>
+								<div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Telepon</div>
+								<div class="text-slate-200">{nazhir.telepon}</div>
+							</div>
+						)}
+					</div>
+				) : (
+					<p class="text-slate-500 text-sm italic">Profil lembaga tidak ditemukan.</p>
+				)}
+			</div>
+
+			<!-- Right: Modul Transaksi & Quick Actions (React Island) -->
+			<div class="lg:col-span-2">
+				<TransactionDashboard client:load role={user.role} />
+			</div>
+		</div>
+
+	</main>
+
+	<!-- Footer -->
+	<footer class="w-full border-t border-slate-900 py-6 px-6 bg-slate-950/80 backdrop-blur-sm mt-12">
+		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+			<p>© 2026 Asosiasi Nazhir Indonesia (ANI). Hak Cipta Dilindungi.</p>
+		</div>
+	</footer>
+</Layout>
+
+<script>
+	import { trpc } from '../trpc/client';
+	document.getElementById('btn-logout')?.addEventListener('click', async () => {
+		try {
+			await trpc.auth.logout.mutate();
+			window.location.href = '/';
+		} catch (e) {
+			console.error('Gagal keluar:', e);
+		}
+	});
+</script>

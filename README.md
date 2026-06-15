@@ -70,7 +70,7 @@ User → Cloudflare CDN → Pages (Astro Frontend)
 ## Dokumentasi
 
 - [Product Requirements Document (PRD)](./Product%20Requirements%20Document%20(PRD)_%20Dashboard%20Wakaf%20Nasional%20ANI.md)
-- [FSD — Functional Spec Document](./docs/FSD.md) *(coming soon)*
+- [FSD — Functional Spec Document](./docs/FSD.md)
 - [API Documentation](./docs/API.md) *(coming soon)*
 
 ## Development
