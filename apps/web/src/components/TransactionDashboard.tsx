@@ -173,6 +173,19 @@ export default function TransactionDashboard({ role }: { role: string }) {
     }
   };
 
+  const handleSubmitAset = async (id: string) => {
+    if (!confirm('Ajukan aset ini ke Admin ANI? Data akan masuk antrean verifikasi.')) return;
+    setLoading(true);
+    try {
+      await trpc.aset.submitAset.mutate({ id });
+      fetchData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengajukan aset.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleApprove = async (id: string, type: 'aset' | 'keuangan', status: 'APPROVED' | 'REJECTED') => {
     const reason = status === 'REJECTED' ? prompt('Masukkan catatan revisi / alasan penolakan:') : '';
     if (status === 'REJECTED' && reason === null) return; // cancel
@@ -404,18 +417,28 @@ export default function TransactionDashboard({ role }: { role: string }) {
                           </div>
                         </td>
                         <td className="p-4">
-                          {item.url_sertifikat ? (
-                            <a
-                              href={item.url_sertifikat}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-emerald-400 hover:text-emerald-300 font-semibold inline-flex items-center gap-1 text-xs"
-                            >
-                              📂 Lihat Sertifikat
-                            </a>
-                          ) : (
-                            <span className="text-slate-600 text-xs italic">Tidak ada</span>
-                          )}
+                          <div className="flex flex-col gap-2 items-start">
+                            {item.url_sertifikat ? (
+                              <a
+                                href={item.url_sertifikat}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-400 hover:text-emerald-300 font-semibold inline-flex items-center gap-1 text-xs"
+                              >
+                                📂 Lihat Sertifikat
+                              </a>
+                            ) : (
+                              <span className="text-slate-600 text-xs italic">Tidak ada</span>
+                            )}
+                            {role === 'NAZHIR' && (item.status_approval === 'DRAFT' || item.status_approval === 'REJECTED') && (
+                              <button
+                                onClick={() => handleSubmitAset(item.id)}
+                                className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-semibold cursor-pointer"
+                              >
+                                Ajukan
+                              </button>
+                            )}
+                          </div>
                         </td>
                         {role === 'ADMIN_ANI' && (
                           <td className="p-4 text-right space-x-2">

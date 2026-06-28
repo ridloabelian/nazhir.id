@@ -22,6 +22,16 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
   });
 });
 
+async function assertVerifiedNazhir(sql: Context['sql'], user: NonNullable<Context['user']>) {
+  if (user.role !== 'NAZHIR' || !user.nazhirId) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Hanya akun Nazhir yang dapat melakukan aksi ini' });
+  }
+  const [nazhir] = await sql`SELECT status_verifikasi FROM nazhir WHERE id = ${user.nazhirId} LIMIT 1`;
+  if (!nazhir || nazhir.status_verifikasi !== 'VERIFIED') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Akun lembaga Anda belum diverifikasi Admin ANI' });
+  }
+}
+
 const authRouter = router({
   registerNazhir: publicProcedure
     .input(z.object({
@@ -174,9 +184,7 @@ const asetRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { sql, user } = ctx;
-      if (user.role !== 'NAZHIR') {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Hanya akun Nazhir yang dapat mendaftarkan aset' });
-      }
+      await assertVerifiedNazhir(sql, user);
       
       const [aset] = await sql`
         INSERT INTO aset_wakaf (
@@ -188,6 +196,44 @@ const asetRouter = router({
         ) RETURNING id
       `;
       return { success: true, id: aset.id };
+    }),
+
+  updateAset: protectedProcedure
+    .input(z.object({
+      id: z.string().uuid(),
+      tipeAset: z.enum(['TANAH', 'BANGUNAN', 'UANG', 'SURAT_BERHARGA']),
+      namaAset: z.string().min(3),
+      nilaiEstimasi: z.number().nonnegative(),
+      luasTanah: z.number().nullable().optional(),
+      luasBangunan: z.number().nullable().optional(),
+      alamatAset: z.string().nullable().optional(),
+      urlSertifikat: z.string().nullable().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { sql, user } = ctx;
+      await assertVerifiedNazhir(sql, user);
+      const [aset] = await sql`
+        UPDATE aset_wakaf
+        SET tipe_aset = ${input.tipeAset}, nama_aset = ${input.namaAset}, nilai_estimasi = ${input.nilaiEstimasi}, luas_tanah = ${input.luasTanah ?? null}, luas_bangunan = ${input.luasBangunan ?? null}, alamat_aset = ${input.alamatAset ?? null}, url_sertifikat = COALESCE(${input.urlSertifikat ?? null}, url_sertifikat), status_approval = 'DRAFT', catatan_revisi = null
+        WHERE id = ${input.id} AND nazhir_id = ${user.nazhirId} AND status_approval IN ('DRAFT', 'REJECTED')
+        RETURNING id
+      `;
+      if (!aset) throw new TRPCError({ code: 'FORBIDDEN', message: 'Aset tidak bisa diedit' });
+      return { success: true, id: aset.id };
+    }),
+
+  submitAset: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const { sql, user } = ctx;
+      await assertVerifiedNazhir(sql, user);
+      const [aset] = await sql`
+        UPDATE aset_wakaf SET status_approval = 'SUBMITTED', catatan_revisi = null
+        WHERE id = ${input.id} AND nazhir_id = ${user.nazhirId} AND status_approval IN ('DRAFT', 'REJECTED')
+        RETURNING id
+      `;
+      if (!aset) throw new TRPCError({ code: 'FORBIDDEN', message: 'Aset tidak bisa diajukan' });
+      return { success: true };
     }),
 
   getAsetList: protectedProcedure
@@ -242,9 +288,7 @@ const keuanganRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { sql, user } = ctx;
-      if (user.role !== 'NAZHIR') {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Hanya akun Nazhir yang dapat mengirim laporan keuangan' });
-      }
+      await assertVerifiedNazhir(sql, user);
 
       // Cek apakah laporan periode tersebut sudah ada
       const existing = await sql`
@@ -253,6 +297,13 @@ const keuanganRouter = router({
         LIMIT 1
       `;
       if (existing.length > 0) {
+        const [laporan] = await sql`
+          UPDATE laporan_keuangan
+          SET total_penerimaan = ${input.totalPenerimaan}, total_penyaluran = ${input.totalPenyaluran}, url_dokumen_pdf = ${input.urlDokumenPdf}, status_approval = 'SUBMITTED', catatan_revisi = null
+          WHERE nazhir_id = ${user.nazhirId} AND periode_bulan = ${input.periodeBulan} AND periode_tahun = ${input.periodeTahun} AND status_approval = 'REJECTED'
+          RETURNING id
+        `;
+        if (laporan) return { success: true, id: laporan.id };
         throw new TRPCError({ code: 'CONFLICT', message: 'Laporan keuangan untuk periode ini sudah pernah dikirim.' });
       }
 
@@ -318,7 +369,7 @@ const dampakRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { sql, user } = ctx;
-      if (user.role !== 'NAZHIR') throw new TRPCError({ code: 'FORBIDDEN', message: 'Hanya akun Nazhir yang dapat memasukkan laporan dampak' });
+      await assertVerifiedNazhir(sql, user);
       const [dampak] = await sql`INSERT INTO laporan_dampak_sosial (nazhir_id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan) VALUES (${user.nazhirId}, ${input.namaProgram}, ${input.jumlahPenerima}, ${input.sektorDampak}, ${input.deskripsiDampak}, ${JSON.stringify(input.metrikTambahan ?? {})}) RETURNING id`;
       return { success: true, id: dampak.id };
     }),
@@ -333,10 +384,8 @@ const dampakRouter = router({
 const nazhirRouter = router({
   getProfile: protectedProcedure.query(async ({ ctx }) => {
     const { sql, user } = ctx;
-    if (!user.nazhirId && user.role !== 'ADMIN_ANI') return { profile: null };
-    const [profile] = user.role === 'ADMIN_ANI'
-      ? await sql`SELECT id, nama_lembaga, no_reg_bwi, alamat, telepon, status_verifikasi, created_at FROM nazhir ORDER BY created_at DESC LIMIT 1`
-      : await sql`SELECT id, nama_lembaga, no_reg_bwi, alamat, telepon, status_verifikasi, created_at FROM nazhir WHERE id = ${user.nazhirId} LIMIT 1`;
+    if (!user.nazhirId) return { profile: null };
+    const [profile] = await sql`SELECT id, nama_lembaga, no_reg_bwi, alamat, telepon, status_verifikasi, created_at FROM nazhir WHERE id = ${user.nazhirId} LIMIT 1`;
     return { profile: profile || null };
   }),
   updateProfile: protectedProcedure.input(z.object({ namaLembaga: z.string().min(3), alamat: z.string().min(5), telepon: z.string().optional().nullable() })).mutation(async ({ input, ctx }) => {
@@ -367,3 +416,4 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
