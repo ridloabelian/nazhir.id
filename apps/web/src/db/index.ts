@@ -8,8 +8,9 @@ export function getDB(env: Record<string, string | undefined>) {
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is missing');
     }
+    const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
     sqlClient = postgres(connectionString, {
-      ssl: 'require',
+      ssl: isLocal ? false : 'require',
       max: 10,
       idle_timeout: 20,
     });

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { trpc } from '../trpc/client';
 
-type Tab = 'aset' | 'keuangan' | 'dampak';
+type Tab = 'aset' | 'keuangan' | 'dampak' | 'nazhir';
 
 export default function TransactionDashboard({ role }: { role: string }) {
-  const [activeTab, setActiveTab] = useState<Tab>('aset');
+  const [activeTab, setActiveTab] = useState<Tab>(role === 'NAZHIR' ? 'aset' : 'nazhir');
   const [showModal, setShowModal] = useState<string | null>(null); // 'aset' | 'keuangan' | 'dampak' | null
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -46,6 +46,9 @@ export default function TransactionDashboard({ role }: { role: string }) {
         setData(res);
       } else if (activeTab === 'dampak') {
         const res = await trpc.dampak.getDampakList.query();
+        setData(res);
+      } else if (activeTab === 'nazhir') {
+        const res = await trpc.nazhir.listNazhir.query();
         setData(res);
       }
     } catch (err: any) {
@@ -189,6 +192,19 @@ export default function TransactionDashboard({ role }: { role: string }) {
     }
   };
 
+  const handleVerifyNazhir = async (id: string, status: 'VERIFIED' | 'REJECTED') => {
+    if (!confirm(`Apakah Anda yakin ingin menandai lembaga ini sebagai ${status}?`)) return;
+    setLoading(true);
+    try {
+      await trpc.nazhir.verifyNazhir.mutate({ id, status });
+      fetchData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal memverifikasi lembaga.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatRupiah = (val: number | string) => {
     const num = typeof val === 'string' ? parseFloat(val) : val;
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
@@ -212,6 +228,16 @@ export default function TransactionDashboard({ role }: { role: string }) {
     <div className="space-y-6">
       {/* Tab Selectors */}
       <div className="flex border-b border-slate-900 pb-px gap-6">
+        {(role === 'ADMIN_ANI' || role === 'VERIFIKATOR') && (
+          <button
+            onClick={() => setActiveTab('nazhir')}
+            className={`pb-4 text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
+              activeTab === 'nazhir' ? 'border-emerald-500 text-emerald-400 font-bold' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Daftar Nazhir
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('aset')}
           className={`pb-4 text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
@@ -241,9 +267,9 @@ export default function TransactionDashboard({ role }: { role: string }) {
       {/* Action Header */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-bold text-white uppercase tracking-wider">
-          Daftar {activeTab === 'aset' ? 'Aset Wakaf' : activeTab === 'keuangan' ? 'Laporan Keuangan' : 'Laporan Dampak'}
+          Daftar {activeTab === 'aset' ? 'Aset Wakaf' : activeTab === 'keuangan' ? 'Laporan Keuangan' : activeTab === 'dampak' ? 'Laporan Dampak' : 'Nazhir Terdaftar'}
         </h3>
-        {role === 'NAZHIR' && (
+        {role === 'NAZHIR' && activeTab !== 'nazhir' && (
           <button
             onClick={() => setShowModal(activeTab)}
             className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-lg shadow transition duration-200 cursor-pointer"
@@ -309,11 +335,55 @@ export default function TransactionDashboard({ role }: { role: string }) {
                       <th className="p-4">Deskripsi Dampak</th>
                     </>
                   )}
+                  {activeTab === 'nazhir' && (
+                    <>
+                      <th className="p-4">Nama Lembaga</th>
+                      <th className="p-4">No. Reg BWI</th>
+                      <th className="p-4">Alamat & Telepon</th>
+                      <th className="p-4">Status</th>
+                      {(role === 'ADMIN_ANI' || role === 'VERIFIKATOR') && <th className="p-4 text-right">Aksi</th>}
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-900/50">
                 {data.map((item, idx) => (
                   <tr key={item.id || idx} className="hover:bg-slate-900/10 transition-colors">
+                    {/* Nazhir Columns */}
+                    {activeTab === 'nazhir' && (
+                      <>
+                        <td className="p-4 text-slate-100 font-bold">{item.nama_lembaga}</td>
+                        <td className="p-4 text-slate-300 font-mono text-xs">{item.no_reg_bwi}</td>
+                        <td className="p-4 text-slate-400 text-xs">
+                          <div>{item.alamat}</div>
+                          {item.telepon && <div className="text-slate-500 mt-0.5">📞 {item.telepon}</div>}
+                        </td>
+                        <td className="p-4">{getStatusBadge(item.status_verifikasi)}</td>
+                        {(role === 'ADMIN_ANI' || role === 'VERIFIKATOR') && (
+                          <td className="p-4 text-right space-x-2">
+                            {item.status_verifikasi === 'PENDING' ? (
+                              <>
+                                <button
+                                  onClick={() => handleVerifyNazhir(item.id, 'VERIFIED')}
+                                  className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold cursor-pointer"
+                                >
+                                  Setujui
+                                </button>
+                                <button
+                                  onClick={() => handleVerifyNazhir(item.id, 'REJECTED')}
+                                  className="px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-semibold cursor-pointer"
+                                >
+                                  Tolak
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-slate-600 text-xs italic">Telah diverifikasi</span>
+                            )}
+                          </td>
+                        )}
+                      </>
+                    )}
+
                     {/* Aset Columns */}
                     {activeTab === 'aset' && (
                       <>

@@ -318,43 +318,49 @@ const dampakRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { sql, user } = ctx;
-      if (user.role !== 'NAZHIR') {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Hanya akun Nazhir yang dapat memasukkan laporan dampak' });
-      }
-
-      const [dampak] = await sql`
-        INSERT INTO laporan_dampak_sosial (
-          nazhir_id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan
-        ) VALUES (
-          ${user.nazhirId}, ${input.namaProgram}, ${input.jumlahPenerima}, ${input.sektorDampak}, ${input.deskripsiDampak}, ${JSON.stringify(input.metrikTambahan ?? {})}
-        ) RETURNING id
-      `;
+      if (user.role !== 'NAZHIR') throw new TRPCError({ code: 'FORBIDDEN', message: 'Hanya akun Nazhir yang dapat memasukkan laporan dampak' });
+      const [dampak] = await sql`INSERT INTO laporan_dampak_sosial (nazhir_id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan) VALUES (${user.nazhirId}, ${input.namaProgram}, ${input.jumlahPenerima}, ${input.sektorDampak}, ${input.deskripsiDampak}, ${JSON.stringify(input.metrikTambahan ?? {})}) RETURNING id`;
       return { success: true, id: dampak.id };
     }),
+  getDampakList: protectedProcedure.query(async ({ ctx }) => {
+    const { sql, user } = ctx;
+    return user.role === 'NAZHIR'
+      ? await sql`SELECT id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan, created_at FROM laporan_dampak_sosial WHERE nazhir_id = ${user.nazhirId} ORDER BY created_at DESC`
+      : await sql`SELECT d.id, d.nama_program, d.jumlah_penerima, d.sektor_dampak, d.deskripsi_dampak, d.metrik_tambahan, d.created_at, n.nama_lembaga FROM laporan_dampak_sosial d JOIN nazhir n ON d.nazhir_id = n.id ORDER BY d.created_at DESC`;
+  }),
+});
 
-  getDampakList: protectedProcedure
-    .query(async ({ ctx }) => {
-      const { sql, user } = ctx;
-      if (user.role === 'NAZHIR') {
-        return await sql`
-          SELECT id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan, created_at
-          FROM laporan_dampak_sosial
-          WHERE nazhir_id = ${user.nazhirId}
-          ORDER BY created_at DESC
-        `;
-      } else {
-        return await sql`
-          SELECT d.id, d.nama_program, d.jumlah_penerima, d.sektor_dampak, d.deskripsi_dampak, d.metrik_tambahan, d.created_at, n.nama_lembaga
-          FROM laporan_dampak_sosial d
-          JOIN nazhir n ON d.nazhir_id = n.id
-          ORDER BY d.created_at DESC
-        `;
-      }
-    }),
+const nazhirRouter = router({
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    const { sql, user } = ctx;
+    if (!user.nazhirId && user.role !== 'ADMIN_ANI') return { profile: null };
+    const [profile] = user.role === 'ADMIN_ANI'
+      ? await sql`SELECT id, nama_lembaga, no_reg_bwi, alamat, telepon, status_verifikasi, created_at FROM nazhir ORDER BY created_at DESC LIMIT 1`
+      : await sql`SELECT id, nama_lembaga, no_reg_bwi, alamat, telepon, status_verifikasi, created_at FROM nazhir WHERE id = ${user.nazhirId} LIMIT 1`;
+    return { profile: profile || null };
+  }),
+  updateProfile: protectedProcedure.input(z.object({ namaLembaga: z.string().min(3), alamat: z.string().min(5), telepon: z.string().optional().nullable() })).mutation(async ({ input, ctx }) => {
+    const { sql, user } = ctx;
+    if (!user.nazhirId) throw new TRPCError({ code: 'FORBIDDEN' });
+    await sql`UPDATE nazhir SET nama_lembaga = ${input.namaLembaga}, alamat = ${input.alamat}, telepon = ${input.telepon ?? null} WHERE id = ${user.nazhirId}`;
+    return { success: true };
+  }),
+  listNazhir: protectedProcedure.query(async ({ ctx }) => {
+    const { sql, user } = ctx;
+    if (user.role !== 'ADMIN_ANI' && user.role !== 'VERIFIKATOR') throw new TRPCError({ code: 'FORBIDDEN' });
+    return await sql`SELECT id, nama_lembaga, no_reg_bwi, alamat, telepon, status_verifikasi, created_at FROM nazhir ORDER BY created_at DESC`;
+  }),
+  verifyNazhir: protectedProcedure.input(z.object({ id: z.string().uuid(), status: z.enum(['VERIFIED','REJECTED']) })).mutation(async ({ input, ctx }) => {
+    const { sql, user } = ctx;
+    if (user.role !== 'ADMIN_ANI' && user.role !== 'VERIFIKATOR') throw new TRPCError({ code: 'FORBIDDEN' });
+    await sql`UPDATE nazhir SET status_verifikasi = ${input.status} WHERE id = ${input.id}`;
+    return { success: true };
+  }),
 });
 
 export const appRouter = router({
   auth: authRouter,
+  nazhir: nazhirRouter,
   aset: asetRouter,
   keuangan: keuanganRouter,
   dampak: dampakRouter,
