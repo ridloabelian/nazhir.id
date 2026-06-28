@@ -5,96 +5,158 @@ import { env } from 'cloudflare:workers';
 import { getDB } from '../db';
 import { getLucia } from '../auth';
 
-// SSR: Cek apakah user sudah login
-const isProd = import.meta.env.PROD;
-const sql = getDB(env as any);
-const lucia = getLucia(sql, isProd);
+const fmt = new Intl.NumberFormat('id-ID');
+const rupiah = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
 
-const sessionId = Astro.cookies.get(lucia.sessionCookieName)?.value;
 let user = null;
+let stats = {
+  totalNazhir: 0,
+  verifiedNazhir: 0,
+  totalAset: 0,
+  nilaiAset: 0,
+  totalPenerimaan: 0,
+  totalPenyaluran: 0,
+  totalPenerima: 0,
+};
+let dbReady = false;
+let sql: ReturnType<typeof getDB> | null = null;
 
-if (sessionId) {
-	try {
-		const result = await lucia.validateSession(sessionId);
-		user = result.user;
-		if (user) {
-			return Astro.redirect('/dashboard');
-		}
-	} catch (e) {
-		// Sesi tidak valid/kedaluwarsa
-	}
+try {
+  sql = getDB(env as any);
+  dbReady = true;
+  const isProd = import.meta.env.PROD;
+  const lucia = getLucia(sql, isProd);
+  const sessionId = Astro.cookies.get(lucia.sessionCookieName)?.value;
+
+  if (sessionId) {
+    try {
+      const result = await lucia.validateSession(sessionId);
+      user = result.user;
+      if (user) return Astro.redirect('/dashboard');
+    } catch (_) {}
+  }
+
+  const [nazhirStats] = await sql`SELECT COUNT(*)::int as total, COUNT(*) FILTER (WHERE status_verifikasi = 'VERIFIED')::int as verified FROM nazhir`;
+  const [asetStats] = await sql`SELECT COUNT(*)::int as total, COALESCE(SUM(nilai_estimasi), 0)::float as nilai FROM aset_wakaf WHERE status_approval = 'APPROVED'`;
+  const [keuanganStats] = await sql`SELECT COALESCE(SUM(total_penerimaan), 0)::float as masuk, COALESCE(SUM(total_penyaluran), 0)::float as keluar FROM laporan_keuangan WHERE status_approval = 'APPROVED'`;
+  const [dampakStats] = await sql`SELECT COALESCE(SUM(jumlah_penerima), 0)::int as penerima FROM laporan_dampak_sosial`;
+
+  stats = {
+    totalNazhir: nazhirStats?.total ?? 0,
+    verifiedNazhir: nazhirStats?.verified ?? 0,
+    totalAset: asetStats?.total ?? 0,
+    nilaiAset: asetStats?.nilai ?? 0,
+    totalPenerimaan: keuanganStats?.masuk ?? 0,
+    totalPenyaluran: keuanganStats?.keluar ?? 0,
+    totalPenerima: dampakStats?.penerima ?? 0,
+  };
+} catch (_) {
+  dbReady = false;
+} finally {
+  if (sql) await sql.end({ timeout: 1 }).catch(() => undefined);
 }
 ---
 
-<Layout title="Dashboard Wakaf Nasional | Asosiasi Nazhir Indonesia">
-	<!-- Header -->
-	<header class="w-full max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-		<div class="flex items-center gap-2">
-			<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-				<span class="font-extrabold text-slate-950 text-lg">N</span>
-			</div>
-			<span class="font-bold text-xl tracking-tight text-white">nazhir<span class="text-emerald-400">.id</span></span>
-		</div>
-		<div class="flex items-center gap-2">
-			<span class="text-xs font-semibold px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full uppercase tracking-wider">
-				SaaS Beta v1.0
-			</span>
-		</div>
-	</header>
+<Layout title="nazhir.id | Dashboard Wakaf Nasional ANI">
+  <header class="w-full max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+    <a href="/" class="flex items-center gap-3">
+      <img src="/logo-ani.png" alt="Logo Asosiasi Nazhir Indonesia" class="h-12 w-auto rounded-lg bg-white p-1" />
+      <div>
+        <div class="font-extrabold text-xl tracking-tight text-white">nazhir<span class="text-emerald-400">.id</span></div>
+        <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-bold">Dashboard Wakaf Nasional</div>
+      </div>
+    </a>
+    <div class="hidden sm:flex items-center gap-3">
+      <span class={`text-xs font-bold px-3 py-1 rounded-full border ${dbReady ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
+        {dbReady ? 'Live Data' : 'Demo Mode'}
+      </span>
+      <a href="#login" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition">Masuk</a>
+    </div>
+  </header>
 
-	<!-- Main Content Area -->
-	<main class="w-full max-w-7xl mx-auto px-6 py-12 lg:py-20 flex flex-col lg:flex-row items-center justify-between gap-12 flex-1">
-		
-		<!-- Left: Marketing / Copywriting -->
-		<div class="flex-1 text-center lg:text-left space-y-8 max-w-2xl">
-			<div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 border border-slate-800 rounded-full text-slate-300 text-sm">
-				<span class="flex h-2 w-2 relative">
-					<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-					<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-				</span>
-				<span>Mandat Rakernas ANI 2026-2030</span>
-			</div>
+  <main class="w-full max-w-7xl mx-auto px-6 pb-16 space-y-16">
+    <section class="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center pt-10 lg:pt-16">
+      <div class="space-y-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 border border-slate-800 rounded-full text-slate-300 text-sm">
+          <span class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]"></span>
+          Single Source of Truth Data Wakaf Anggota ANI
+        </div>
 
-			<h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
-				Standardisasi & Transparansi <br class="hidden sm:inline" />
-				<span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500">
-					Wakaf Nasional
-				</span>
-			</h1>
+        <div class="space-y-5">
+          <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black text-white leading-[0.98] tracking-tight">
+            Transparansi Wakaf Nasional, <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-300 to-emerald-500">Berbasis Data.</span>
+          </h1>
+          <p class="text-slate-400 text-lg sm:text-xl leading-relaxed max-w-2xl">
+            Platform terpusat Asosiasi Nazhir Indonesia untuk standardisasi data aset, laporan keuangan, dampak sosial, dan verifikasi akuntabilitas Nazhir.
+          </p>
+        </div>
 
-			<p class="text-slate-400 text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
-				Platform pelaporan terpadu untuk Asosiasi Nazhir Indonesia. Konsolidasi data aset, verifikasi dampak sosial, dan akuntabilitas keuangan secara real-time.
-			</p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a href="#login" class="px-6 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-center transition shadow-lg shadow-emerald-500/20">Daftar / Login Nazhir</a>
+          <a href="#statistik" class="px-6 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-center border border-slate-800 transition">Lihat Statistik Nasional</a>
+        </div>
+      </div>
 
-			<!-- Metrics / Badges -->
-			<div class="grid grid-cols-2 gap-4 max-w-md mx-auto lg:mx-0 pt-4">
-				<div class="p-4 bg-slate-900/40 border border-slate-900 rounded-xl">
-					<div class="text-2xl font-bold text-white">85%</div>
-					<div class="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">Target Adopsi 2030</div>
-				</div>
-				<div class="p-4 bg-slate-900/40 border border-slate-900 rounded-xl">
-					<div class="text-2xl font-bold text-white">ISO 27001</div>
-					<div class="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">Standar Keamanan</div>
-				</div>
-			</div>
-		</div>
+      <div id="login" class="w-full flex justify-center lg:justify-end">
+        <AuthForm client:load />
+      </div>
+    </section>
 
-		<!-- Right: Auth Box (React Island) -->
-		<div class="w-full lg:w-auto flex justify-center items-center z-10">
-			<AuthForm client:load />
-		</div>
+    <section id="statistik" class="space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <p class="text-emerald-400 font-black uppercase tracking-[0.24em] text-xs">Agregat Nasional</p>
+          <h2 class="text-3xl sm:text-4xl font-black text-white mt-2">Data wakaf terverifikasi</h2>
+        </div>
+        <p class="text-slate-500 text-sm max-w-xl">Angka di bawah hanya menghitung data yang sudah tervalidasi/terverifikasi di dashboard ANI.</p>
+      </div>
 
-	</main>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="p-6 rounded-3xl bg-slate-900/70 border border-slate-800">
+          <div class="text-slate-500 text-xs font-black uppercase tracking-widest">Nazhir Terverifikasi</div>
+          <div class="text-3xl font-black text-white mt-3">{fmt.format(stats.verifiedNazhir)}<span class="text-slate-600 text-xl">/{fmt.format(stats.totalNazhir)}</span></div>
+        </div>
+        <div class="p-6 rounded-3xl bg-slate-900/70 border border-slate-800">
+          <div class="text-slate-500 text-xs font-black uppercase tracking-widest">Aset Disetujui</div>
+          <div class="text-3xl font-black text-white mt-3">{fmt.format(stats.totalAset)}</div>
+        </div>
+        <div class="p-6 rounded-3xl bg-slate-900/70 border border-slate-800">
+          <div class="text-slate-500 text-xs font-black uppercase tracking-widest">Estimasi Nilai Aset</div>
+          <div class="text-2xl font-black text-emerald-300 mt-3">{rupiah(stats.nilaiAset)}</div>
+        </div>
+        <div class="p-6 rounded-3xl bg-slate-900/70 border border-slate-800">
+          <div class="text-slate-500 text-xs font-black uppercase tracking-widest">Penerima Manfaat</div>
+          <div class="text-3xl font-black text-white mt-3">{fmt.format(stats.totalPenerima)} <span class="text-slate-500 text-sm">jiwa</span></div>
+        </div>
+      </div>
+    </section>
 
-	<!-- Footer -->
-	<footer class="w-full border-t border-slate-900 py-6 px-6 bg-slate-950/80 backdrop-blur-sm">
-		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-			<p>© 2026 Asosiasi Nazhir Indonesia (ANI). Hak Cipta Dilindungi.</p>
-			<div class="flex gap-6">
-				<a href="#" class="hover:text-slate-300 transition">Syarat & Ketentuan</a>
-				<a href="#" class="hover:text-slate-300 transition">Kebijakan Privasi</a>
-				<a href="file:///Users/ridloabelian/Github/nazhir.id/docs/FSD.md" class="hover:text-slate-300 transition font-semibold text-emerald-500/80">Dokumentasi FSD</a>
-			</div>
-		</div>
-	</footer>
+    <section class="grid lg:grid-cols-3 gap-4">
+      <div class="p-6 rounded-3xl bg-gradient-to-br from-emerald-500/15 to-slate-900 border border-emerald-500/20">
+        <div class="text-2xl">1</div>
+        <h3 class="text-xl font-black text-white mt-4">Input Standar</h3>
+        <p class="text-slate-400 mt-2">Nazhir memasukkan data aset, keuangan, dan dampak dalam format nasional yang seragam.</p>
+      </div>
+      <div class="p-6 rounded-3xl bg-slate-900/70 border border-slate-800">
+        <div class="text-2xl">2</div>
+        <h3 class="text-xl font-black text-white mt-4">Verifikasi ANI</h3>
+        <p class="text-slate-400 mt-2">Admin dan verifikator memeriksa data, memberi catatan revisi, lalu menyetujui data valid.</p>
+      </div>
+      <div class="p-6 rounded-3xl bg-slate-900/70 border border-slate-800">
+        <div class="text-2xl">3</div>
+        <h3 class="text-xl font-black text-white mt-4">Transparansi Publik</h3>
+        <p class="text-slate-400 mt-2">Data terverifikasi menjadi statistik nasional dan profil kredibilitas Nazhir.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="w-full border-t border-slate-900 py-6 px-6 bg-slate-950/80">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+      <p>© 2026 Asosiasi Nazhir Indonesia (ANI). Hak Cipta Dilindungi.</p>
+      <div class="flex gap-6">
+        <a href="/dashboard" class="hover:text-slate-300 transition">Dashboard</a>
+        <a href="/docs/PRD_V2.md" class="hover:text-slate-300 transition">PRD V2</a>
+      </div>
+    </div>
+  </footer>
 </Layout>
