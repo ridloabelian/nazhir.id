@@ -15,7 +15,7 @@
   "dependencies": {
     "@astrojs/cloudflare": "^13.7.0",
     "@astrojs/react": "^5.0.7",
-    "@lucia-auth/adapter-postgresql": "^3.1.2",
+    "@lucia-auth/adapter-sqlite": "^3.0.2",
     "@tailwindcss/vite": "^4.3.0",
     "@trpc/client": "^11.17.0",
     "@trpc/server": "^11.17.0",
@@ -23,7 +23,6 @@
     "@types/react-dom": "^19.2.3",
     "astro": "^6.4.7",
     "lucia": "^3.2.2",
-    "postgres": "^3.4.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tailwindcss": "^4.3.0",
