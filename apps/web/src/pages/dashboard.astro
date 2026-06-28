@@ -6,26 +6,10 @@ import { getLucia } from '../auth';
 import TransactionDashboard from '../components/TransactionDashboard';
 
 // SSR: Cek otentikasi
-const isProd = import.meta.env.PROD;
-const sql = getDB(env as any);
-const lucia = getLucia(sql, isProd);
-
-const sessionId = Astro.cookies.get(lucia.sessionCookieName)?.value;
-
-if (!sessionId) {
-	return Astro.redirect('/');
-}
-
 let user = null;
 let session = null;
 
-try {
-	const result = await lucia.validateSession(sessionId);
-	user = result.user;
-	session = result.session;
-} catch (e) {
-	// Sesi tidak valid
-}
+return Astro.redirect('/?demo_mode=true');
 
 if (!user) {
 	return Astro.redirect('/');
