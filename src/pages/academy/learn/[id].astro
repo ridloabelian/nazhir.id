@@ -1,0 +1,19 @@
+---
+// src/pages/academy/learn/[id].astro
+import CoursePlayer from '../../../components/CoursePlayer.jsx';
+
+const { id } = Astro.params;
+---
+
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ruang Belajar | INA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="overflow-hidden">
+    <!-- Mount React Component with client:load directive to make it interactive -->
+    <CoursePlayer client:load courseId={id} />
+</body>
+</html>

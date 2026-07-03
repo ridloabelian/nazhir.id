@@ -1,0 +1,63 @@
+---
+// src/pages/academy/index.astro
+// import BaseLayout from '../../layouts/BaseLayout.astro';
+// (Placeholder layout, adapt to actual project structure)
+
+const title = "Indonesia Nazhir Academy";
+const description = "Pusat pembelajaran dan sertifikasi nazhir nasional.";
+
+// Mock data (akan diganti dengan fetch dari Supabase)
+const courses = [
+  {
+    id: 1,
+    title: "Sertifikasi Kompetensi Nazhir Dasar",
+    instructor: "Imam Nur Azis",
+    status: "Tersedia",
+    image: "https://via.placeholder.com/400x200"
+  },
+  {
+    id: 2,
+    title: "Manajemen Aset Wakaf Produktif",
+    instructor: "Dr. Mayurida",
+    status: "Segera Hadir",
+    image: "https://via.placeholder.com/400x200"
+  }
+];
+---
+
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} | Dashboard Wakaf Nasional</title>
+    <!-- Tailwind via CDN for quick scaffold visualization, usually handled by Astro integration -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 sm:text-5xl">{title}</h1>
+            <p class="mt-4 text-xl text-slate-600">{description}</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {courses.map(course => (
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+                    <img src={course.image} alt={course.title} class="w-full h-48 object-cover" />
+                    <div class="p-6">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-4">
+                            {course.status}
+                        </span>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">{course.title}</h3>
+                        <p class="text-sm text-slate-500 mb-4">Instruktur: {course.instructor}</p>
+                        <a href={`/academy/${course.id}`} class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                            Lihat Detail
+                        </a>
+                    </div>
+                </div>
+            ))}
+        </div>
+    </main>
+</body>
+</html>
