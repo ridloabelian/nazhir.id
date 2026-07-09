@@ -4,14 +4,27 @@ import { env } from 'cloudflare:workers';
 import { getDB } from '../db';
 import { getLucia } from '../auth';
 import TransactionDashboard from '../components/TransactionDashboard';
+import AkuntansiDashboard from '../components/AkuntansiDashboard';
 
 // SSR: Cek otentikasi
+const sql = getDB(env as any);
+const lucia = getLucia(sql as any, import.meta.env.PROD);
+const sessionId = Astro.cookies.get(lucia.sessionCookieName)?.value ?? null;
 let user = null;
 let session = null;
 
-return Astro.redirect('/?demo_mode=true');
+if (sessionId) {
+	try {
+		const result = await lucia.validateSession(sessionId);
+		user = result.user;
+		session = result.session;
+	} catch (_) {
+		user = null;
+		session = null;
+	}
+}
 
-if (!user) {
+if (!user || !session) {
 	return Astro.redirect('/');
 }
 
@@ -170,6 +183,8 @@ const formatRupiah = (num: number) => {
 				<TransactionDashboard client:load role={user.role} />
 			</div>
 		</div>
+
+		<AkuntansiDashboard client:load role={user.role} />
 
 	</main>
 
