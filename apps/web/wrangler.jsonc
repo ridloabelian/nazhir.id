@@ -16,6 +16,13 @@
 			"bucket_name": "laporan-wakaf"
 		}
 	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "nazhir-id",
+			"database_id": "REPLACE_WITH_D1_ID"
+		}
+	],
 	"routes": [
 		{
 			"pattern": "nazhir.id",
