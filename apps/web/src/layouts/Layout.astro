@@ -56,6 +56,12 @@ const {
 		</div>
 		<div class="relative z-10 min-h-screen flex flex-col justify-between">
 			<slot />
+			<nav class="w-full border-t border-slate-900 px-6 py-4 text-center text-xs text-slate-500 bg-slate-950/40" aria-label="Informasi situs">
+				<a class="hover:text-emerald-400 mx-2" href="/about">Tentang</a>
+				<a class="hover:text-emerald-400 mx-2" href="/contact">Kontak</a>
+				<a class="hover:text-emerald-400 mx-2" href="/privacy-policy">Privasi</a>
+				<a class="hover:text-emerald-400 mx-2" href="/terms">Ketentuan</a>
+			</nav>
 		</div>
 		<label class="sr-only" for="theme-select">Pilih tema</label>
 		<select id="theme-select" class="theme-select" aria-label="Pilih tema tampilan">

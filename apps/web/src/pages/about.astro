@@ -1,0 +1,27 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Tentang nazhir.id | Dashboard Wakaf Nasional ANI" description="Tentang nazhir.id, platform digital tata kelola wakaf untuk Nazhir Indonesia.">
+  <main class="max-w-4xl mx-auto px-6 py-20 space-y-8">
+    <a href="/" class="text-emerald-400 text-sm font-bold">← Kembali</a>
+    <section class="space-y-4">
+      <h1 class="text-4xl font-black text-white">Tentang nazhir.id</h1>
+      <p class="text-slate-300 leading-8">nazhir.id adalah platform digital untuk membantu lembaga Nazhir mengelola data aset wakaf, pelaporan keuangan, dampak sosial, dan akuntansi wakaf berbasis PSAK 412.</p>
+      <p class="text-slate-300 leading-8">Platform ini dikembangkan untuk mendukung transformasi tata kelola wakaf yang profesional, transparan, akuntabel, dan mudah diaudit.</p>
+    </section>
+    <section class="grid md:grid-cols-3 gap-4">
+      {['Transparansi', 'Akuntabilitas', 'Digitalisasi'].map((item) => (
+        <div class="p-5 rounded-xl border border-slate-800 bg-slate-950/40">
+          <h2 class="font-bold text-emerald-400">{item}</h2>
+          <p class="text-sm text-slate-400 mt-2">Prinsip utama dalam penguatan Good Waqf Governance.</p>
+        </div>
+      ))}
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-2xl font-bold text-white">Pengelola</h2>
+      <p class="text-slate-300">Asosiasi Nazhir Indonesia (ANI)</p>
+      <p class="text-slate-400 text-sm">Email: <a class="text-emerald-400" href="mailto:asosiasinazhir@gmail.com">asosiasinazhir@gmail.com</a></p>
+    </section>
+  </main>
+</Layout>
