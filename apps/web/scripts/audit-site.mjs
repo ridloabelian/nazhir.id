@@ -19,6 +19,8 @@ for (const f of files(src)) {
   const s = readFileSync(f, 'utf8');
   if (s.includes('@lucia-auth/adapter-postgresql') || s.includes('from "postgres"') || s.includes("from 'postgres'")) issues.push(`${f}: sisa Postgres import`);
   if (s.includes('ctx.sql.end')) issues.push(`${f}: sisa sql.end() Postgres`);
+  if (s.includes('.begin(')) issues.push(`${f}: sql.begin palsu masih dipakai`);
+  if (s.includes('Math.random()')) issues.push(`${f}: Math.random() dipakai untuk ID/security-sensitive key`);
   if (s.includes('dbReady = false') && s.includes('DEMO MODE PATCH')) issues.push(`${f}: demo mode hardcode`);
 }
 

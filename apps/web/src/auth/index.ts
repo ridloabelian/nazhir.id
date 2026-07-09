@@ -57,7 +57,7 @@ export function getLucia(sql: Sql, prod: boolean) {
   const adapter = makeD1Adapter(sql);
   return new Lucia(adapter, {
     sessionCookie: {
-      attributes: { secure: prod },
+      attributes: { secure: true, httpOnly: true, sameSite: "lax", path: "/" },
     },
     getUserAttributes: (attributes) => ({
       email: attributes.email,

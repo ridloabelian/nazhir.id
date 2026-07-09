@@ -58,25 +58,21 @@ const authRouter = router({
         throw new TRPCError({ code: 'CONFLICT', message: 'Nomor registrasi BWI sudah terdaftar' });
       }
 
+      const nazhirId = crypto.randomUUID();
+      const userId = crypto.randomUUID();
       try {
-        const result = await sql.begin(async (tx) => {
-          const nazhirId = crypto.randomUUID();
-          const [nazhir] = await tx`
-            INSERT INTO nazhir (id, nama_lembaga, no_reg_bwi, alamat, telepon)
-            VALUES (${nazhirId}, ${input.namaLembaga}, ${input.noRegBwi}, ${input.alamat}, ${input.telepon ?? null})
-            RETURNING id
-          `;
+        await sql`
+          INSERT INTO nazhir (id, nama_lembaga, no_reg_bwi, alamat, telepon)
+          VALUES (${nazhirId}, ${input.namaLembaga}, ${input.noRegBwi}, ${input.alamat}, ${input.telepon ?? null})
+        `;
 
-          const userId = crypto.randomUUID();
-          const hashedPassword = hashPassword(input.password);
+        const hashedPassword = hashPassword(input.password);
+        await sql`
+          INSERT INTO users (id, email, hashed_password, role, nazhir_id)
+          VALUES (${userId}, ${input.email}, ${hashedPassword}, 'NAZHIR', ${nazhirId})
+        `;
 
-          await tx`
-            INSERT INTO users (id, email, hashed_password, role, nazhir_id)
-            VALUES (${userId}, ${input.email}, ${hashedPassword}, 'NAZHIR', ${nazhir.id})
-          `;
-
-          return { userId };
-        });
+        const result = { userId };
 
         const session = await ctx.lucia.createSession(result.userId, {});
         const sessionCookie = ctx.lucia.createSessionCookie(session.id);
@@ -89,6 +85,8 @@ const authRouter = router({
         
         return { success: true };
       } catch (error) {
+        await sql`DELETE FROM users WHERE id = ${userId}`.catch(() => []);
+        await sql`DELETE FROM nazhir WHERE id = ${nazhirId}`.catch(() => []);
         console.error('Registration Error:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -190,10 +188,10 @@ const asetRouter = router({
       
       const [aset] = await sql`
         INSERT INTO aset_wakaf (
-          nazhir_id, tipe_aset, nama_aset, nilai_estimasi, 
+          id, nazhir_id, tipe_aset, nama_aset, nilai_estimasi, 
           luas_tanah, luas_bangunan, alamat_aset, url_sertifikat
         ) VALUES (
-          ${user.nazhirId}, ${input.tipeAset}, ${input.namaAset}, ${input.nilaiEstimasi},
+          ${crypto.randomUUID()}, ${user.nazhirId}, ${input.tipeAset}, ${input.namaAset}, ${input.nilaiEstimasi},
           ${input.luasTanah ?? null}, ${input.luasBangunan ?? null}, ${input.alamatAset ?? null}, ${input.urlSertifikat ?? null}
         ) RETURNING id
       `;
@@ -311,9 +309,9 @@ const keuanganRouter = router({
 
       const [laporan] = await sql`
         INSERT INTO laporan_keuangan (
-          nazhir_id, periode_bulan, periode_tahun, total_penerimaan, total_penyaluran, url_dokumen_pdf
+          id, nazhir_id, periode_bulan, periode_tahun, total_penerimaan, total_penyaluran, url_dokumen_pdf
         ) VALUES (
-          ${user.nazhirId}, ${input.periodeBulan}, ${input.periodeTahun}, ${input.totalPenerimaan}, ${input.totalPenyaluran}, ${input.urlDokumenPdf}
+          ${crypto.randomUUID()}, ${user.nazhirId}, ${input.periodeBulan}, ${input.periodeTahun}, ${input.totalPenerimaan}, ${input.totalPenyaluran}, ${input.urlDokumenPdf}
         ) RETURNING id
       `;
       return { success: true, id: laporan.id };
@@ -372,7 +370,7 @@ const dampakRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { sql, user } = ctx;
       await assertVerifiedNazhir(sql, user);
-      const [dampak] = await sql`INSERT INTO laporan_dampak_sosial (nazhir_id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan) VALUES (${user.nazhirId}, ${input.namaProgram}, ${input.jumlahPenerima}, ${input.sektorDampak}, ${input.deskripsiDampak}, ${JSON.stringify(input.metrikTambahan ?? {})}) RETURNING id`;
+      const [dampak] = await sql`INSERT INTO laporan_dampak_sosial (id, nazhir_id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan) VALUES (${crypto.randomUUID()}, ${user.nazhirId}, ${input.namaProgram}, ${input.jumlahPenerima}, ${input.sektorDampak}, ${input.deskripsiDampak}, ${JSON.stringify(input.metrikTambahan ?? {})}) RETURNING id`;
       return { success: true, id: dampak.id };
     }),
   getDampakList: protectedProcedure.query(async ({ ctx }) => {

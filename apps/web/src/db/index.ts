@@ -15,12 +15,5 @@ export function getDB(env: { DB: D1Database }) {
     return results;
   };
 
-  // Transaction stub (D1 batches) - since we just use it for single logic inside
-  sql.begin = async function<T>(callback: (tx: typeof sql) => Promise<T>): Promise<T> {
-    // Note: D1 batching exists, but this wrapper runs them sequentially inside the worker. 
-    // This is safe for single-worker concurrent logic mostly.
-    return callback(sql);
-  };
-
   return sql;
 }

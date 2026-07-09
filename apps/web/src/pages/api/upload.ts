@@ -3,7 +3,14 @@ import { env } from 'cloudflare:workers';
 import { getDB } from '../../db';
 import { getLucia } from '../../auth';
 
+const ALLOWED_ORIGINS = new Set(['https://nazhir.id', 'https://www.nazhir.id']);
+
 export const POST: APIRoute = async (context) => {
+  const origin = context.request.headers.get('Origin');
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return new Response(JSON.stringify({ error: 'Origin tidak diizinkan' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
+
   const isProd = import.meta.env.PROD;
   const sql = getDB(env as any);
   const lucia = getLucia(sql, isProd);
@@ -45,8 +52,9 @@ export const POST: APIRoute = async (context) => {
       return new Response(JSON.stringify({ error: 'Penyimpanan R2 tidak terkonfigurasi' }), { status: 500 });
     }
 
-    const fileExtension = file.name.split('.').pop();
-    const uniqueKey = `${user.nazhirId}/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExtension}`;
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'bin';
+    const safeNazhirId = user.nazhirId || 'unknown';
+    const uniqueKey = `${safeNazhirId}/${crypto.randomUUID()}.${fileExtension}`;
 
     // Konversi file ke arrayBuffer
     const arrayBuffer = await file.arrayBuffer();

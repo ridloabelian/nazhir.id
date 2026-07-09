@@ -156,14 +156,18 @@ export const akuntansiRouter = router({
       }
 
       const txId = crypto.randomUUID();
-      await sql.begin(async (tx) => {
-        await tx`INSERT INTO transaksi (id, nazhir_id, tanggal, kategori, deskripsi, total, status, dibuat_oleh)
+      try {
+        await sql`INSERT INTO transaksi (id, nazhir_id, tanggal, kategori, deskripsi, total, status, dibuat_oleh)
           VALUES (${txId}, ${user.nazhirId}, ${input.tanggal}, ${input.kategori}, ${input.deskripsi}, ${totalDebit}, 'DIAJUKAN', ${user.id})`;
         for (const b of input.baris) {
-          await tx`INSERT INTO jurnal_baris (id, transaksi_id, akun_id, debit, kredit)
+          await sql`INSERT INTO jurnal_baris (id, transaksi_id, akun_id, debit, kredit)
             VALUES (${crypto.randomUUID()}, ${txId}, ${b.akunId}, ${b.debit}, ${b.kredit})`;
         }
-      });
+      } catch (e) {
+        await sql`DELETE FROM jurnal_baris WHERE transaksi_id = ${txId}`.catch(() => []);
+        await sql`DELETE FROM transaksi WHERE id = ${txId}`.catch(() => []);
+        throw e;
+      }
       await logAudit(sql, user.nazhirId!, user.id, 'CREATE', 'transaksi', txId, input.deskripsi);
       return { success: true, id: txId };
     }),
@@ -228,12 +232,13 @@ export const akuntansiRouter = router({
     const { sql, user } = ctx;
     const scopeId = user.role === 'NAZHIR' ? user.nazhirId : null;
     if (!scopeId) throw new TRPCError({ code: 'FORBIDDEN' });
-    // Saldo per akun = SUM(debit) - SUM(kredit) dari transaksi DISETUJUI.
+    // Saldo per akun = SUM(debit/kredit) hanya dari transaksi DISETUJUI.
     return await sql`SELECT a.kode, a.nama, a.tipe, a.saldo_normal,
-        COALESCE(SUM(jb.debit),0) AS total_debit, COALESCE(SUM(jb.kredit),0) AS total_kredit
+        COALESCE(SUM(CASE WHEN t.status = 'DISETUJUI' THEN jb.debit ELSE 0 END),0) AS total_debit,
+        COALESCE(SUM(CASE WHEN t.status = 'DISETUJUI' THEN jb.kredit ELSE 0 END),0) AS total_kredit
       FROM akun a
       LEFT JOIN jurnal_baris jb ON jb.akun_id = a.id
-      LEFT JOIN transaksi t ON jb.transaksi_id = t.id AND t.status = 'DISETUJUI'
+      LEFT JOIN transaksi t ON t.id = jb.transaksi_id
       WHERE a.nazhir_id = ${scopeId}
       GROUP BY a.id ORDER BY a.kode`;
   }),
@@ -244,10 +249,11 @@ export const akuntansiRouter = router({
     const scopeId = user.role === 'NAZHIR' ? user.nazhirId : null;
     if (!scopeId) throw new TRPCError({ code: 'FORBIDDEN' });
     const rows = await sql`SELECT a.tipe, a.saldo_normal,
-        COALESCE(SUM(jb.debit),0) AS d, COALESCE(SUM(jb.kredit),0) AS k
+        COALESCE(SUM(CASE WHEN t.status = 'DISETUJUI' THEN jb.debit ELSE 0 END),0) AS d,
+        COALESCE(SUM(CASE WHEN t.status = 'DISETUJUI' THEN jb.kredit ELSE 0 END),0) AS k
       FROM akun a
       LEFT JOIN jurnal_baris jb ON jb.akun_id = a.id
-      LEFT JOIN transaksi t ON jb.transaksi_id = t.id AND t.status = 'DISETUJUI'
+      LEFT JOIN transaksi t ON t.id = jb.transaksi_id
       WHERE a.nazhir_id = ${scopeId} GROUP BY a.id`;
     const agg: Record<string, number> = { ASET: 0, LIABILITAS: 0, ASET_NETO: 0, PENDAPATAN: 0, BEBAN: 0 };
     for (const r of rows as any[]) {
@@ -318,12 +324,16 @@ export const akuntansiRouter = router({
         const bulanan = Math.floor(a.nilai_perolehan / a.umur_manfaat_bulan);
         const nilai = Math.min(bulanan, sisa);
         if (nilai <= 0) continue;
-        await sql.begin(async (tx) => {
-          await tx`INSERT INTO penyusutan_log (id, aset_tetap_id, periode_bulan, periode_tahun, nilai_penyusutan)
-            VALUES (${crypto.randomUUID()}, ${a.id}, ${input.periodeBulan}, ${input.periodeTahun}, ${nilai})`;
-          await tx`UPDATE aset_tetap SET akumulasi_penyusutan = akumulasi_penyusutan + ${nilai} WHERE id = ${a.id}`;
-        });
-        diproses++;
+        const logId = crypto.randomUUID();
+        try {
+          await sql`INSERT INTO penyusutan_log (id, aset_tetap_id, periode_bulan, periode_tahun, nilai_penyusutan)
+            VALUES (${logId}, ${a.id}, ${input.periodeBulan}, ${input.periodeTahun}, ${nilai})`;
+          await sql`UPDATE aset_tetap SET akumulasi_penyusutan = akumulasi_penyusutan + ${nilai} WHERE id = ${a.id}`;
+          diproses++;
+        } catch (e) {
+          await sql`DELETE FROM penyusutan_log WHERE id = ${logId}`.catch(() => []);
+          throw e;
+        }
       }
       await logAudit(sql, user.nazhirId!, user.id, 'PENYUSUTAN', 'aset_tetap', null, `${input.periodeBulan}/${input.periodeTahun}: ${diproses} aset`);
       return { success: true, diproses };
