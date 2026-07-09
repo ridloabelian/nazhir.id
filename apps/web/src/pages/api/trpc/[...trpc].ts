@@ -9,14 +9,10 @@ export const ALL: APIRoute = async (context) => {
     cookies: context.cookies,
   });
 
-  try {
-    return await fetchRequestHandler({
-      endpoint: '/api/trpc',
-      req: context.request,
-      router: appRouter,
-      createContext: () => ctx,
-    });
-  } finally {
-    await ctx.sql.end({ timeout: 1 }).catch(() => undefined);
-  }
+  return await fetchRequestHandler({
+    endpoint: '/api/trpc',
+    req: context.request,
+    router: appRouter,
+    createContext: () => ctx,
+  });
 };

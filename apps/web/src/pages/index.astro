@@ -22,24 +22,24 @@ let dbReady = false;
 let sql: ReturnType<typeof getDB> | null = null;
 
 try {
-  // DEMO MODE PATCH: Bypass DB to fix Edge timeout
-  dbReady = false;
-  
-  // Fallback ke dummy data untuk Demo Mode
-  const nazhirStats = { total: 42, verified: 15 };
-  const asetStats = { total: 128, nilai: 45000000000 };
-  const keuanganStats = { masuk: 1200000000, keluar: 800000000 };
-  const dampakStats = { penerima: 15000 };
+  sql = getDB(env as any);
+
+  // Ambil statistik nyata dari D1.
+  const [nazhirStats] = await sql`SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN status_verifikasi='VERIFIED' THEN 1 ELSE 0 END),0) AS verified FROM nazhir`;
+  const [asetStats] = await sql`SELECT COUNT(*) AS total, COALESCE(SUM(nilai_estimasi),0) AS nilai FROM aset_wakaf WHERE status_approval='APPROVED'`;
+  const [keuanganStats] = await sql`SELECT COALESCE(SUM(total_penerimaan),0) AS masuk, COALESCE(SUM(total_penyaluran),0) AS keluar FROM laporan_keuangan WHERE status_approval='APPROVED'`;
+  const [dampakStats] = await sql`SELECT COALESCE(SUM(jumlah_penerima),0) AS penerima FROM laporan_dampak_sosial`;
 
   stats = {
-    totalNazhir: nazhirStats?.total ?? 0,
-    verifiedNazhir: nazhirStats?.verified ?? 0,
-    totalAset: asetStats?.total ?? 0,
-    nilaiAset: asetStats?.nilai ?? 0,
-    totalPenerimaan: keuanganStats?.masuk ?? 0,
-    totalPenyaluran: keuanganStats?.keluar ?? 0,
-    totalPenerima: dampakStats?.penerima ?? 0,
+    totalNazhir: Number(nazhirStats?.total ?? 0),
+    verifiedNazhir: Number(nazhirStats?.verified ?? 0),
+    totalAset: Number(asetStats?.total ?? 0),
+    nilaiAset: Number(asetStats?.nilai ?? 0),
+    totalPenerimaan: Number(keuanganStats?.masuk ?? 0),
+    totalPenyaluran: Number(keuanganStats?.keluar ?? 0),
+    totalPenerima: Number(dampakStats?.penerima ?? 0),
   };
+  dbReady = true;
 } catch (_) {
   dbReady = false;
 }
