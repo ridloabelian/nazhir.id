@@ -60,13 +60,14 @@ const authRouter = router({
 
       try {
         const result = await sql.begin(async (tx) => {
+          const nazhirId = crypto.randomUUID();
           const [nazhir] = await tx`
-            INSERT INTO nazhir (nama_lembaga, no_reg_bwi, alamat, telepon)
-            VALUES (${input.namaLembaga}, ${input.noRegBwi}, ${input.alamat}, ${input.telepon ?? null})
+            INSERT INTO nazhir (id, nama_lembaga, no_reg_bwi, alamat, telepon)
+            VALUES (${nazhirId}, ${input.namaLembaga}, ${input.noRegBwi}, ${input.alamat}, ${input.telepon ?? null})
             RETURNING id
           `;
 
-          const userId = Math.random().toString(36).substring(2, 17);
+          const userId = crypto.randomUUID();
           const hashedPassword = hashPassword(input.password);
 
           await tx`
