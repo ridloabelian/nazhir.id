@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import type { Context } from './context';
 import { hashPassword, verifyPassword } from '../auth/password';
+import { akuntansiRouter } from './akuntansi';
 
 const t = initTRPC.context<Context>().create();
 
@@ -413,6 +414,7 @@ export const appRouter = router({
   aset: asetRouter,
   keuangan: keuanganRouter,
   dampak: dampakRouter,
+  akuntansi: akuntansiRouter,
 });
 
 export type AppRouter = typeof appRouter;
