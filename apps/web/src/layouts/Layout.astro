@@ -32,6 +32,25 @@ const {
 		<title>{title}</title>
 		<meta name="title" content={title} />
 		<meta name="description" content={description} />
+		<link rel="canonical" href={new URL(Astro.url.pathname, 'https://nazhir.id').toString()} />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="nazhir.id" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={new URL(Astro.url.pathname, 'https://nazhir.id').toString()} />
+		<meta name="twitter:card" content="summary" />
+		<script type="application/ld+json" set:html={JSON.stringify({
+			'@context': 'https://schema.org',
+			'@type': 'WebSite',
+			name: 'nazhir.id',
+			url: 'https://nazhir.id',
+			publisher: {
+				'@type': 'Organization',
+				name: 'Asosiasi Nazhir Indonesia',
+				email: 'asosiasinazhir@gmail.com',
+				url: 'https://nazhir.id'
+			}
+		})} />
 		
 		<!-- Google Fonts -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">

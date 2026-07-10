@@ -1,0 +1,6 @@
+nazhir.id
+
+Pengelola: Asosiasi Nazhir Indonesia (ANI)
+Kontak: asosiasinazhir@gmail.com
+Tujuan: Dashboard digital tata kelola wakaf, akuntansi PSAK 412, pelaporan aset dan dampak sosial Nazhir.
+Teknologi: Cloudflare Workers, D1, R2, Astro, React, tRPC.

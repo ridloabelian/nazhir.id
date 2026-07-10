@@ -1,0 +1,4 @@
+Contact: mailto:asosiasinazhir@gmail.com
+Preferred-Languages: id, en
+Canonical: https://nazhir.id/.well-known/security.txt
+Policy: https://nazhir.id/privacy-policy/

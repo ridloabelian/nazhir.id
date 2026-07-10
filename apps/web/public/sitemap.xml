@@ -3,6 +3,7 @@
   <url><loc>https://nazhir.id/</loc><priority>1.0</priority></url>
   <url><loc>https://nazhir.id/about</loc><priority>0.8</priority></url>
   <url><loc>https://nazhir.id/contact</loc><priority>0.8</priority></url>
-  <url><loc>https://nazhir.id/privacy-policy</loc><priority>0.6</priority></url>
+  <url><loc>https://nazhir.id/privacy-policy/</loc><priority>0.6</priority></url>
   <url><loc>https://nazhir.id/terms</loc><priority>0.6</priority></url>
+  <url><loc>https://nazhir.id/humans.txt</loc><priority>0.2</priority></url>
 </urlset>
