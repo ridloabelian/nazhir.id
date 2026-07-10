@@ -184,7 +184,7 @@ const formatRupiah = (num: number) => {
 			</div>
 		</div>
 
-		<AkuntansiDashboard client:load role={user.role} />
+		{user.role === 'NAZHIR' && <AkuntansiDashboard client:load role={user.role} />}
 
 	</main>
 
