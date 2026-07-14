@@ -52,9 +52,11 @@ export const POST: APIRoute = async (context) => {
       return new Response(JSON.stringify({ error: 'Penyimpanan R2 tidak terkonfigurasi' }), { status: 500 });
     }
 
+    if (!user.nazhirId) {
+      return new Response(JSON.stringify({ error: 'Akun belum terhubung ke lembaga Nazhir' }), { status: 403 });
+    }
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'bin';
-    const safeNazhirId = user.nazhirId || 'unknown';
-    const uniqueKey = `${safeNazhirId}/${crypto.randomUUID()}.${fileExtension}`;
+    const uniqueKey = `${user.nazhirId}/${crypto.randomUUID()}.${fileExtension}`;
 
     // Konversi file ke arrayBuffer
     const arrayBuffer = await file.arrayBuffer();
