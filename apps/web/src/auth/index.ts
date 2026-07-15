@@ -1,7 +1,5 @@
 import { Lucia, type Adapter, type DatabaseSession, type DatabaseUser } from "lucia";
 
-// Adapter Lucia v3 native untuk wrapper `sql` (D1/SQLite tagged-template) kita.
-// Tabel: users(id, email, hashed_password, role, nazhir_id), sessions(id, user_id, expires_at INTEGER unix-detik).
 type Sql = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
 
 function makeD1Adapter(sql: Sql): Adapter {
@@ -57,7 +55,7 @@ export function getLucia(sql: Sql, prod: boolean) {
   const adapter = makeD1Adapter(sql);
   return new Lucia(adapter, {
     sessionCookie: {
-      attributes: { secure: true, httpOnly: true, sameSite: "lax", path: "/" },
+      attributes: { secure: true, sameSite: "lax", path: "/" },
     },
     getUserAttributes: (attributes) => ({
       email: attributes.email,
