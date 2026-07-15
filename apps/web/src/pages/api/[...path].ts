@@ -256,7 +256,7 @@ app.post('/api/dampak/submit', async (c) => {
   await assertVerifiedNazhir(sql, user);
   const body = await c.req.json();
   const id = crypto.randomUUID();
-  await sql`INSERT INTO laporan_dampak_social (id, nazhir_id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan)
+  await sql`INSERT INTO laporan_dampak_sosial (id, nazhir_id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan)
     VALUES (${id}, ${user.nazhirId}, ${body.namaProgram}, ${body.jumlahPenerima}, ${body.sektorDampak}, ${body.deskripsiDampak}, ${JSON.stringify(body.metrikTambahan ?? {})})`;
   return c.json({ success: true, id });
 });
@@ -265,10 +265,10 @@ app.get('/api/dampak/list', async (c) => {
   const { user } = getAuth(c);
   const sql = c.get('sql');
   if (user.role === 'NAZHIR') {
-    const list = await sql`SELECT id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan, created_at FROM laporan_dampak_social WHERE nazhir_id = ${user.nazhirId} ORDER BY created_at DESC`;
+    const list = await sql`SELECT id, nama_program, jumlah_penerima, sektor_dampak, deskripsi_dampak, metrik_tambahan, created_at FROM laporan_dampak_sosial WHERE nazhir_id = ${user.nazhirId} ORDER BY created_at DESC`;
     return c.json(list);
   }
-  const list = await sql`SELECT d.id, d.nama_program, d.jumlah_penerima, d.sektor_dampak, d.deskripsi_dampak, d.metrik_tambahan, d.created_at, n.nama_lembaga FROM laporan_dampak_social d JOIN nazhir n ON d.nazhir_id = n.id ORDER BY d.created_at DESC`;
+  const list = await sql`SELECT d.id, d.nama_program, d.jumlah_penerima, d.sektor_dampak, d.deskripsi_dampak, d.metrik_tambahan, d.created_at, n.nama_lembaga FROM laporan_dampak_sosial d JOIN nazhir n ON d.nazhir_id = n.id ORDER BY d.created_at DESC`;
   return c.json(list);
 });
 
