@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import { Hono } from 'hono';
 import { getDB } from '../../db';
 import { getLucia } from '../../auth';
@@ -19,7 +20,7 @@ const app = new Hono<{
 
 // Middleware Setup DB & Auth
 app.use('*', async (c, next) => {
-  const sql = getDB(c.env || ({} as any));
+  const sql = getDB(env as any);
   const isProd = import.meta.env.PROD;
   const lucia = getLucia(sql, isProd);
   
@@ -46,15 +47,18 @@ app.use('*', async (c, next) => {
 });
 
 // Guard helper
+class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
+
 const getAuth = (c: any) => {
   const user = c.get('user');
   const session = c.get('session');
   if (!user || !session) {
-    c.status(401);
-    throw new Error('Silakan login terlebih dahulu');
+    throw new HttpError(401, 'Silakan login terlebih dahulu');
   }
   return { user, session };
 };
+
+app.onError((err, c) => err instanceof HttpError ? c.json({ error: err.message }, err.status as any) : c.text('Internal Server Error', 500));
 
 // Guard: verified nazhir
 const assertVerifiedNazhir = async (sql: any, user: any) => {
@@ -583,7 +587,7 @@ app.get('/api/akuntansi/audit-trail', async (c) => {
 app.post('/api/upload', async (c) => {
   const { user } = getAuth(c);
   const sql = c.get('sql');
-  const bucket = c.env.R2_BUCKET;
+  const bucket = (env as any).R2_BUCKET;
   if (!bucket) return c.json({ error: 'Penyimpanan R2 tidak terkonfigurasi' }, 500);
   if (!user.nazhirId) return c.json({ error: 'Akun belum terhubung ke lembaga Nazhir' }, 403);
 
@@ -609,7 +613,7 @@ app.post('/api/upload', async (c) => {
 
 app.get('/api/files/*', async (c) => {
   const { user } = getAuth(c);
-  const bucket = c.env.R2_BUCKET;
+  const bucket = (env as any).R2_BUCKET;
   if (!bucket) return c.text('Penyimpanan R2 tidak terkonfigurasi', 500);
 
   const url = new URL(c.req.url);
@@ -636,5 +640,5 @@ app.get('/api/files/*', async (c) => {
 
 // Main Astro API Router match wrapper
 export const ALL: APIRoute = async (context) => {
-  return app.fetch(context.request, context.locals);
+  return app.fetch(context.request, env as any, context.locals.cfContext);
 };

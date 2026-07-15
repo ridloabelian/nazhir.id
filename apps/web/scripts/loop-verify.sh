@@ -16,7 +16,7 @@ echo "OK: build pass"
 
 # Live smoke checks. Non-fatal if network flaky, fatal if HTTP bukan expected.
 home=$(curl -4 -s -o /dev/null -w '%{http_code}' https://nazhir.id/ -m 20)
-getme=$(curl -4 -s -o /dev/null -w '%{http_code}' 'https://nazhir.id/api/trpc/auth.getMe?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%7D%7D' -m 20)
+getme=$(curl -4 -s -o /dev/null -w '%{http_code}' 'https://nazhir.id/api/auth/me' -m 20)
 dash=$(curl -4 -s -o /dev/null -w '%{http_code}' https://nazhir.id/dashboard -m 20)
 
 [ "$home" = "200" ] || { echo "FAIL: home HTTP=$home"; exit 1; }
