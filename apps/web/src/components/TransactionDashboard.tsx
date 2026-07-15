@@ -73,7 +73,7 @@ export default function TransactionDashboard({ role }: { role: string }) {
       body: formData,
     });
 
-    const result = await res.json();
+    const result = (await res.json()) as any;
     setUploadProgress(false);
 
     if (!res.ok) {

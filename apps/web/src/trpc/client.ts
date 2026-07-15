@@ -11,7 +11,7 @@ class ClientError extends Error {
   }
 }
 
-async function request(url: string, body?: any) {
+async function request(url: string, body?: any): Promise<any> {
   const method = body !== undefined ? 'POST' : 'GET';
   const headers: Record<string, string> = {};
   if (body !== undefined) {
@@ -22,7 +22,7 @@ async function request(url: string, body?: any) {
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  const data = await response.json().catch(() => ({}));
+  const data = (await response.json().catch(() => ({}))) as any;
   if (!response.ok) {
     throw new ClientError(data.error || 'Terjadi kesalahan sistem', data.code);
   }

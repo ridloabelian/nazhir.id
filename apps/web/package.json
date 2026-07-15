@@ -36,6 +36,7 @@
     "esbuild": "^0.28.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
     "@types/node": "^26.1.1"
   }
 }

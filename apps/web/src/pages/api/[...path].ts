@@ -1,11 +1,14 @@
 import type { APIRoute } from 'astro';
 import { Hono } from 'hono';
-import { env } from 'cloudflare:workers';
 import { getDB } from '../../db';
 import { getLucia } from '../../auth';
 import { hashPassword, verifyPassword } from '../../auth/password';
 
 const app = new Hono<{
+  Bindings: {
+    DB: any;
+    R2_BUCKET: any;
+  };
   Variables: {
     sql: ReturnType<typeof getDB>;
     lucia: ReturnType<typeof getLucia>;
@@ -16,7 +19,7 @@ const app = new Hono<{
 
 // Middleware Setup DB & Auth
 app.use('*', async (c, next) => {
-  const sql = getDB(env as any);
+  const sql = getDB(c.env || ({} as any));
   const isProd = import.meta.env.PROD;
   const lucia = getLucia(sql, isProd);
   
@@ -576,7 +579,7 @@ app.get('/api/akuntansi/audit-trail', async (c) => {
 app.post('/api/upload', async (c) => {
   const { user } = getAuth(c);
   const sql = c.get('sql');
-  const bucket = env.R2_BUCKET as any;
+  const bucket = c.env.R2_BUCKET;
   if (!bucket) return c.json({ error: 'Penyimpanan R2 tidak terkonfigurasi' }, 500);
   if (!user.nazhirId) return c.json({ error: 'Akun belum terhubung ke lembaga Nazhir' }, 403);
 
@@ -602,7 +605,7 @@ app.post('/api/upload', async (c) => {
 
 app.get('/api/files/*', async (c) => {
   const { user } = getAuth(c);
-  const bucket = env.R2_BUCKET as any;
+  const bucket = c.env.R2_BUCKET;
   if (!bucket) return c.text('Penyimpanan R2 tidak terkonfigurasi', 500);
 
   const url = new URL(c.req.url);
