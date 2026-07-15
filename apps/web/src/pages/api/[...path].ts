@@ -388,16 +388,20 @@ app.post('/api/akuntansi/transaksi/create', async (c) => {
   const tahun = Number(body.tanggal.slice(0, 4));
   await assertNotLocked(sql, user.nazhirId!, tahun);
 
-  const totalDebit = body.baris.reduce((s: number, b: any) => s + b.debit, 0);
-  const totalKredit = body.baris.reduce((s: number, b: any) => s + b.kredit, 0);
-  if (totalDebit !== totalKredit || totalDebit <= 0) {
-    return c.json({ error: 'Jurnal tidak balance atau kurang dari nol' }, 400);
+  const baris = Array.isArray(body.baris)
+    ? body.baris.map((b: any) => ({ akunId: b.akunId, debit: Number(b.debit || 0), kredit: Number(b.kredit || 0) }))
+    : [];
+  const totalDebit = baris.reduce((s: number, b: any) => s + b.debit, 0);
+  const totalKredit = baris.reduce((s: number, b: any) => s + b.kredit, 0);
+  const perBarisValid = baris.every((b: any) => b.akunId && Number.isFinite(b.debit) && Number.isFinite(b.kredit) && ((b.debit > 0 && b.kredit === 0) || (b.kredit > 0 && b.debit === 0)));
+  if (baris.length < 2 || totalDebit !== totalKredit || totalDebit <= 0 || !perBarisValid) {
+    return c.json({ error: 'Jurnal tidak balance atau baris tidak valid' }, 400);
   }
 
   const txId = crypto.randomUUID();
   await sql`INSERT INTO transaksi (id, nazhir_id, tanggal, kategori, deskripsi, total, status, dibuat_oleh)
     VALUES (${txId}, ${user.nazhirId}, ${body.tanggal}, ${body.kategori}, ${body.deskripsi}, ${totalDebit}, 'DIAJUKAN', ${user.id})`;
-  for (const b of body.baris) {
+  for (const b of baris) {
     await sql`INSERT INTO jurnal_baris (id, transaksi_id, akun_id, debit, kredit)
       VALUES (${crypto.randomUUID()}, ${txId}, ${b.akunId}, ${b.debit}, ${b.kredit})`;
   }

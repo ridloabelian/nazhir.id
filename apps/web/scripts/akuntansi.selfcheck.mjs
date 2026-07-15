@@ -4,19 +4,24 @@
 import assert from 'node:assert';
 
 // --- Balance check (cerminan validasi di createTransaksi) ---
-function isBalanced(baris) {
-  const d = baris.reduce((s, b) => s + (b.debit || 0), 0);
-  const k = baris.reduce((s, b) => s + (b.kredit || 0), 0);
+function isBalanced(input) {
+  const baris = Array.isArray(input)
+    ? input.map((b) => ({ akunId: b.akunId, debit: Number(b.debit || 0), kredit: Number(b.kredit || 0) }))
+    : [];
+  const d = baris.reduce((s, b) => s + b.debit, 0);
+  const k = baris.reduce((s, b) => s + b.kredit, 0);
   const perBarisValid = baris.every(
-    (b) => (b.debit > 0 && b.kredit === 0) || (b.kredit > 0 && b.debit === 0)
+    (b) => b.akunId && Number.isFinite(b.debit) && Number.isFinite(b.kredit) && ((b.debit > 0 && b.kredit === 0) || (b.kredit > 0 && b.debit === 0))
   );
-  return d === k && d > 0 && perBarisValid;
+  return baris.length >= 2 && d === k && d > 0 && perBarisValid;
 }
 // Penerimaan wakaf uang 10jt: Kas (D) / Penerimaan Wakaf Uang (K)
-assert.equal(isBalanced([{ debit: 10000000, kredit: 0 }, { debit: 0, kredit: 10000000 }]), true, 'jurnal balance harus true');
-assert.equal(isBalanced([{ debit: 10000000, kredit: 0 }, { debit: 0, kredit: 9000000 }]), false, 'tidak balance harus false');
-assert.equal(isBalanced([{ debit: 5000, kredit: 5000 }, { debit: 0, kredit: 0 }]), false, 'baris debit+kredit sekaligus harus false');
-assert.equal(isBalanced([{ debit: 0, kredit: 0 }, { debit: 0, kredit: 0 }]), false, 'total 0 harus false');
+assert.equal(isBalanced([{ akunId: 'kas', debit: 10000000, kredit: 0 }, { akunId: 'penerimaan', debit: 0, kredit: 10000000 }]), true, 'jurnal balance harus true');
+assert.equal(isBalanced([{ akunId: 'kas', debit: 10000000, kredit: 0 }, { akunId: 'penerimaan', debit: 0, kredit: 9000000 }]), false, 'tidak balance harus false');
+assert.equal(isBalanced([{ akunId: 'kas', debit: 5000, kredit: 5000 }, { akunId: 'penerimaan', debit: 0, kredit: 0 }]), false, 'baris debit+kredit sekaligus harus false');
+assert.equal(isBalanced([{ akunId: 'kas', debit: 0, kredit: 0 }, { akunId: 'penerimaan', debit: 0, kredit: 0 }]), false, 'total 0 harus false');
+assert.equal(isBalanced([{ akunId: 'kas', debit: 1000, kredit: 0 }, { akunId: '', debit: 0, kredit: 1000 }]), false, 'akun kosong harus false');
+assert.equal(isBalanced([{ akunId: 'kas', debit: 1000, kredit: 0 }]), false, 'minimal dua baris');
 
 // --- Penyusutan garis lurus (cerminan jalankanPenyusutan) ---
 function penyusutanBulanan(nilaiPerolehan, umurBulan, akumulasi) {
