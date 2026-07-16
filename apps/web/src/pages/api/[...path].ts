@@ -589,7 +589,7 @@ app.post('/api/upload', async (c) => {
   const sql = c.get('sql');
   const bucket = (env as any).R2_BUCKET;
   if (!bucket) return c.json({ error: 'Penyimpanan R2 tidak terkonfigurasi' }, 500);
-  if (!user.nazhirId) return c.json({ error: 'Akun belum terhubung ke lembaga Nazhir' }, 403);
+  await assertVerifiedNazhir(sql, user);
 
   try {
     const formData = await c.req.formData();
