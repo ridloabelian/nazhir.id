@@ -63,11 +63,11 @@ app.onError((err, c) => err instanceof HttpError ? c.json({ error: err.message }
 // Guard: verified nazhir
 const assertVerifiedNazhir = async (sql: any, user: any) => {
   if (user.role !== 'NAZHIR' || !user.nazhirId) {
-    throw new Error('Hanya akun Nazhir yang dapat melakukan aksi ini');
+    throw new HttpError(403, 'Hanya akun Nazhir yang dapat melakukan aksi ini');
   }
   const [nazhir] = await sql`SELECT status_verifikasi FROM nazhir WHERE id = ${user.nazhirId} LIMIT 1`;
   if (!nazhir || nazhir.status_verifikasi !== 'VERIFIED') {
-    throw new Error('Akun lembaga Anda belum diverifikasi Admin ANI');
+    throw new HttpError(403, 'Akun lembaga Anda belum diverifikasi Admin ANI');
   }
 };
 
