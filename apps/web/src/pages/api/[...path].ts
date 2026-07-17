@@ -389,7 +389,11 @@ app.post('/api/akuntansi/transaksi/create', async (c) => {
   const sql = c.get('sql');
   await assertVerifiedNazhir(sql, user);
   const body = await c.req.json();
-  const tahun = Number(body.tanggal.slice(0, 4));
+  const tanggal = String(body.tanggal ?? '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal) || Number.isNaN(Date.parse(`${tanggal}T00:00:00Z`))) {
+    return c.json({ error: 'Tanggal transaksi tidak valid' }, 400);
+  }
+  const tahun = Number(tanggal.slice(0, 4));
   await assertNotLocked(sql, user.nazhirId!, tahun);
 
   const baris = Array.isArray(body.baris)
@@ -407,7 +411,7 @@ app.post('/api/akuntansi/transaksi/create', async (c) => {
 
   const txId = crypto.randomUUID();
   await sql`INSERT INTO transaksi (id, nazhir_id, tanggal, kategori, deskripsi, total, status, dibuat_oleh)
-    VALUES (${txId}, ${user.nazhirId}, ${body.tanggal}, ${body.kategori}, ${body.deskripsi}, ${totalDebit}, 'DIAJUKAN', ${user.id})`;
+    VALUES (${txId}, ${user.nazhirId}, ${tanggal}, ${body.kategori}, ${body.deskripsi}, ${totalDebit}, 'DIAJUKAN', ${user.id})`;
   for (const b of baris) {
     await sql`INSERT INTO jurnal_baris (id, transaksi_id, akun_id, debit, kredit)
       VALUES (${crypto.randomUUID()}, ${txId}, ${b.akunId}, ${b.debit}, ${b.kredit})`;

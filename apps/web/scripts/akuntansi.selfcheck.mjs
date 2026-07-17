@@ -4,6 +4,11 @@
 import assert from 'node:assert';
 
 // --- Balance check (cerminan validasi di createTransaksi) ---
+function isValidTanggalTransaksi(input) {
+  const tanggal = String(input ?? '');
+  return /^\d{4}-\d{2}-\d{2}$/.test(tanggal) && !Number.isNaN(Date.parse(`${tanggal}T00:00:00Z`));
+}
+
 function isBalanced(input) {
   const baris = Array.isArray(input)
     ? input.map((b) => ({ akunId: b.akunId, debit: Number(b.debit || 0), kredit: Number(b.kredit || 0) }))
@@ -23,6 +28,9 @@ assert.equal(isBalanced([{ akunId: 'kas', debit: 0, kredit: 0 }, { akunId: 'pene
 assert.equal(isBalanced([{ akunId: 'kas', debit: 1000, kredit: 0 }, { akunId: '', debit: 0, kredit: 1000 }]), false, 'akun kosong harus false');
 assert.equal(isBalanced([{ akunId: 'kas', debit: 1000, kredit: 0 }]), false, 'minimal dua baris');
 assert.equal(new Set(['kas', 'penerimaan']).size, 2, 'akun unik dihitung sekali untuk validasi tenant');
+assert.equal(isValidTanggalTransaksi('2026-07-17'), true, 'tanggal ISO valid');
+assert.equal(isValidTanggalTransaksi(undefined), false, 'tanggal kosong harus false');
+assert.equal(isValidTanggalTransaksi('2026-7-17'), false, 'tanggal non-ISO harus false');
 
 // --- Penyusutan garis lurus (cerminan jalankanPenyusutan) ---
 function penyusutanBulanan(nilaiPerolehan, umurBulan, akumulasi) {
