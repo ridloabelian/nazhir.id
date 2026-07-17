@@ -32,6 +32,10 @@ const dashboard = readFileSync(join(src, 'pages/dashboard.astro'), 'utf8');
 assert(!dashboard.includes('demo_mode=true'), 'dashboard masih redirect demo_mode');
 assert(dashboard.includes('AkuntansiDashboard'), 'panel AkunWakaf belum dipasang');
 
+const api = readFileSync(join(src, 'pages/api/[...path].ts'), 'utf8');
+assert(api.includes('file.size > 10 * 1024 * 1024'), 'upload belum membatasi ukuran file');
+assert(api.includes("'application/pdf'") && api.includes("'image/jpeg'"), 'upload belum membatasi MIME file');
+
 if (issues.length) {
   console.error('AUDIT FAIL');
   for (const i of issues) console.error(`- ${i}`);

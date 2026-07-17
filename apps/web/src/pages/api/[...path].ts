@@ -602,8 +602,11 @@ app.post('/api/upload', async (c) => {
     const formData = await c.req.formData();
     const file = formData.get('file') as File;
     if (!file) return c.json({ error: 'File tidak ditemukan' }, 400);
+    if (file.size > 10 * 1024 * 1024) return c.json({ error: 'Ukuran file maksimal 10MB' }, 413);
 
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'bin';
+    const uploadTypes: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    const fileExtension = uploadTypes[file.type];
+    if (!fileExtension) return c.json({ error: 'Tipe file tidak didukung' }, 415);
     const uniqueKey = `${user.nazhirId}/${crypto.randomUUID()}.${fileExtension}`;
     const arrayBuffer = await file.arrayBuffer();
 
