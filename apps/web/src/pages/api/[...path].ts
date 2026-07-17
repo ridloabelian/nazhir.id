@@ -401,6 +401,9 @@ app.post('/api/akuntansi/transaksi/create', async (c) => {
   if (baris.length < 2 || totalDebit !== totalKredit || totalDebit <= 0 || !perBarisValid) {
     return c.json({ error: 'Jurnal tidak balance atau baris tidak valid' }, 400);
   }
+  const akunIds = [...new Set(baris.map((b: any) => b.akunId))];
+  const ownAccounts = await sql`SELECT id FROM akun WHERE nazhir_id = ${user.nazhirId} AND id IN ${sql(akunIds)}`;
+  if (ownAccounts.length !== akunIds.length) return c.json({ error: 'Akun jurnal tidak valid' }, 400);
 
   const txId = crypto.randomUUID();
   await sql`INSERT INTO transaksi (id, nazhir_id, tanggal, kategori, deskripsi, total, status, dibuat_oleh)
@@ -471,7 +474,7 @@ app.get('/api/akuntansi/neraca-saldo', async (c) => {
       COALESCE(SUM(CASE WHEN t.status = 'DISETUJUI' THEN jb.kredit ELSE 0 END),0) AS total_kredit
     FROM akun a
     LEFT JOIN jurnal_baris jb ON jb.akun_id = a.id
-    LEFT JOIN transaksi t ON t.id = jb.transaksi_id
+    LEFT JOIN transaksi t ON t.id = jb.transaksi_id AND t.nazhir_id = ${user.nazhirId}
     WHERE a.nazhir_id = ${user.nazhirId}
     GROUP BY a.id ORDER BY a.kode`;
   return c.json(rows);
@@ -486,7 +489,7 @@ app.get('/api/akuntansi/laporan-psak412', async (c) => {
       COALESCE(SUM(CASE WHEN t.status = 'DISETUJUI' THEN jb.kredit ELSE 0 END),0) AS k
     FROM akun a
     LEFT JOIN jurnal_baris jb ON jb.akun_id = a.id
-    LEFT JOIN transaksi t ON t.id = jb.transaksi_id
+    LEFT JOIN transaksi t ON t.id = jb.transaksi_id AND t.nazhir_id = ${user.nazhirId}
     WHERE a.nazhir_id = ${user.nazhirId} GROUP BY a.id`;
   const agg: Record<string, number> = { ASET: 0, LIABILITAS: 0, ASET_NETO: 0, PENDAPATAN: 0, BEBAN: 0 };
   for (const r of rows as any[]) {

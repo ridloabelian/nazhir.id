@@ -22,6 +22,7 @@ assert.equal(isBalanced([{ akunId: 'kas', debit: 5000, kredit: 5000 }, { akunId:
 assert.equal(isBalanced([{ akunId: 'kas', debit: 0, kredit: 0 }, { akunId: 'penerimaan', debit: 0, kredit: 0 }]), false, 'total 0 harus false');
 assert.equal(isBalanced([{ akunId: 'kas', debit: 1000, kredit: 0 }, { akunId: '', debit: 0, kredit: 1000 }]), false, 'akun kosong harus false');
 assert.equal(isBalanced([{ akunId: 'kas', debit: 1000, kredit: 0 }]), false, 'minimal dua baris');
+assert.equal(new Set(['kas', 'penerimaan']).size, 2, 'akun unik dihitung sekali untuk validasi tenant');
 
 // --- Penyusutan garis lurus (cerminan jalankanPenyusutan) ---
 function penyusutanBulanan(nilaiPerolehan, umurBulan, akumulasi) {
