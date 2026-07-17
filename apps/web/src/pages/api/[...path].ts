@@ -202,7 +202,9 @@ app.post('/api/aset/approve', async (c) => {
   if (user.role !== 'ADMIN_ANI') return c.json({ error: 'Forbidden' }, 403);
   const sql = c.get('sql');
   const body = await c.req.json();
-  await sql`UPDATE aset_wakaf SET status_approval = ${body.status}, catatan_revisi = ${body.catatanRevisi ?? null} WHERE id = ${body.id}`;
+  if (!['APPROVED', 'REJECTED'].includes(body.status)) return c.json({ error: 'Status tidak valid' }, 400);
+  const [aset] = await sql`UPDATE aset_wakaf SET status_approval = ${body.status}, catatan_revisi = ${body.catatanRevisi ?? null} WHERE id = ${body.id} AND status_approval = 'SUBMITTED' RETURNING id`;
+  if (!aset) return c.json({ error: 'Aset tidak bisa direview' }, 400);
   return c.json({ success: true });
 });
 
@@ -249,7 +251,9 @@ app.post('/api/keuangan/approve', async (c) => {
   if (user.role !== 'ADMIN_ANI') return c.json({ error: 'Forbidden' }, 403);
   const sql = c.get('sql');
   const body = await c.req.json();
-  await sql`UPDATE laporan_keuangan SET status_approval = ${body.status}, catatan_revisi = ${body.catatanRevisi ?? null} WHERE id = ${body.id}`;
+  if (!['APPROVED', 'REJECTED'].includes(body.status)) return c.json({ error: 'Status tidak valid' }, 400);
+  const [laporan] = await sql`UPDATE laporan_keuangan SET status_approval = ${body.status}, catatan_revisi = ${body.catatanRevisi ?? null} WHERE id = ${body.id} AND status_approval = 'SUBMITTED' RETURNING id`;
+  if (!laporan) return c.json({ error: 'Laporan tidak bisa direview' }, 400);
   return c.json({ success: true });
 });
 
@@ -307,6 +311,7 @@ app.post('/api/nazhir/verify', async (c) => {
   if (user.role !== 'ADMIN_ANI' && user.role !== 'VERIFIKATOR') return c.json({ error: 'Forbidden' }, 403);
   const sql = c.get('sql');
   const body = await c.req.json();
+  if (!['VERIFIED', 'REJECTED'].includes(body.status)) return c.json({ error: 'Status tidak valid' }, 400);
   await sql`UPDATE nazhir SET status_verifikasi = ${body.status} WHERE id = ${body.id}`;
   return c.json({ success: true });
 });
@@ -406,8 +411,10 @@ app.post('/api/akuntansi/transaksi/create', async (c) => {
     return c.json({ error: 'Jurnal tidak balance atau baris tidak valid' }, 400);
   }
   const akunIds = [...new Set(baris.map((b: any) => b.akunId))];
-  const ownAccounts = await sql`SELECT id FROM akun WHERE nazhir_id = ${user.nazhirId} AND id IN ${sql(akunIds)}`;
-  if (ownAccounts.length !== akunIds.length) return c.json({ error: 'Akun jurnal tidak valid' }, 400);
+  for (const akunId of akunIds) {
+    const [ownAccount] = await sql`SELECT id FROM akun WHERE nazhir_id = ${user.nazhirId} AND id = ${akunId} LIMIT 1`;
+    if (!ownAccount) return c.json({ error: 'Akun jurnal tidak valid' }, 400);
+  }
 
   const txId = crypto.randomUUID();
   await sql`INSERT INTO transaksi (id, nazhir_id, tanggal, kategori, deskripsi, total, status, dibuat_oleh)
@@ -450,6 +457,7 @@ app.post('/api/akuntansi/transaksi/review', async (c) => {
   if (user.role !== 'ADMIN_ANI' && user.role !== 'VERIFIKATOR') return c.json({ error: 'Forbidden' }, 403);
   const sql = c.get('sql');
   const body = await c.req.json();
+  if (!['DISETUJUI', 'DITOLAK'].includes(body.status)) return c.json({ error: 'Status tidak valid' }, 400);
   const [tx] = await sql`SELECT id, nazhir_id, status FROM transaksi WHERE id = ${body.id} LIMIT 1`;
   if (!tx || tx.status !== 'DIAJUKAN') return c.json({ error: 'Invalid transaction status' }, 400);
   await sql`UPDATE transaksi SET status = ${body.status}, disetujui_oleh = ${user.id}, catatan_review = ${body.catatan ?? null} WHERE id = ${body.id}`;

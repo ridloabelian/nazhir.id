@@ -442,7 +442,7 @@ export default function TransactionDashboard({ role }: { role: string }) {
                         </td>
                         {role === 'ADMIN_ANI' && (
                           <td className="p-4 text-right space-x-2">
-                            {item.status_approval === 'SUBMITTED' || item.status_approval === 'DRAFT' ? (
+                            {item.status_approval === 'SUBMITTED' ? (
                               <>
                                 <button
                                   onClick={() => handleApprove(item.id, 'aset', 'APPROVED')}
