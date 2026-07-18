@@ -319,7 +319,7 @@ app.post('/api/nazhir/verify', async (c) => {
 // --- AKUNTANSI / PSAK 412 ---
 const assertNotLocked = async (sql: any, nazhirId: string, tahun: number) => {
   const [locked] = await sql`SELECT id FROM lock_period WHERE nazhir_id = ${nazhirId} AND periode_tahun = ${tahun} LIMIT 1`;
-  if (locked) throw new Error(`Periode tahun ${tahun} sudah ditutup (lock).`);
+  if (locked) throw new HttpError(409, `Periode tahun ${tahun} sudah ditutup (lock).`);
 };
 
 const logAudit = async (sql: any, nazhirId: string, userId: string, aksi: string, entitas: string, entitasId: string | null, detail: string | null) => {
