@@ -6,7 +6,8 @@ import assert from 'node:assert';
 // --- Balance check (cerminan validasi di createTransaksi) ---
 function isValidTanggalTransaksi(input) {
   const tanggal = String(input ?? '');
-  return /^\d{4}-\d{2}-\d{2}$/.test(tanggal) && new Date(`${tanggal}T00:00:00Z`).toISOString().slice(0, 10) === tanggal;
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(tanggal) ? new Date(`${tanggal}T00:00:00Z`) : null;
+  return !!parsed && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === tanggal;
 }
 
 function isBalanced(input) {
