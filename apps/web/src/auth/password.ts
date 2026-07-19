@@ -10,6 +10,8 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   const parts = storedHash.split(':');
   if (parts.length !== 2) return false;
   const [salt, hash] = parts;
+  const hashBuffer = Buffer.from(hash, 'hex');
+  if (hashBuffer.length !== 64) return false;
   const computedHash = scryptSync(password, salt, 64).toString('hex');
-  return timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(computedHash, 'hex'));
+  return timingSafeEqual(hashBuffer, Buffer.from(computedHash, 'hex'));
 }
