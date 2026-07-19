@@ -395,7 +395,7 @@ app.post('/api/akuntansi/transaksi/create', async (c) => {
   await assertVerifiedNazhir(sql, user);
   const body = await c.req.json();
   const tanggal = String(body.tanggal ?? '');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal) || Number.isNaN(Date.parse(`${tanggal}T00:00:00Z`))) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal) || new Date(`${tanggal}T00:00:00Z`).toISOString().slice(0, 10) !== tanggal) {
     return c.json({ error: 'Tanggal transaksi tidak valid' }, 400);
   }
   const tahun = Number(tanggal.slice(0, 4));
