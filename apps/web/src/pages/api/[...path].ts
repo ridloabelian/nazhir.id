@@ -73,9 +73,12 @@ const assertVerifiedNazhir = async (sql: any, user: any) => {
 
 // Auth routes
 app.post('/api/auth/register', async (c) => {
-  const body = await c.req.json();
+  const body = await c.req.json().catch(() => ({}));
   const sql = c.get('sql');
   const lucia = c.get('lucia');
+  if (![body.email, body.password, body.namaLembaga, body.noRegBwi, body.alamat].every((v) => typeof v === 'string' && v.trim())) {
+    return c.json({ error: 'Data registrasi tidak lengkap' }, 400);
+  }
 
   const existingUser = await sql`SELECT id FROM users WHERE email = ${body.email} LIMIT 1`;
   if (existingUser.length > 0) {
