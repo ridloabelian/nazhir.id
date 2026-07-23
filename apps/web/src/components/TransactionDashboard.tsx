@@ -65,21 +65,23 @@ export default function TransactionDashboard({ role }: { role: string }) {
   // Form Upload Helper
   const uploadFile = async (file: File): Promise<string> => {
     setUploadProgress(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-    const result = (await res.json()) as any;
-    setUploadProgress(false);
-
-    if (!res.ok) {
-      throw new Error(result.error || 'Gagal mengunggah berkas.');
+      const result = (await res.json().catch(() => ({}))) as any;
+      if (!res.ok) {
+        throw new Error(result.error || 'Gagal mengunggah berkas.');
+      }
+      return result.url;
+    } finally {
+      setUploadProgress(false);
     }
-    return result.url;
   };
 
   // Submissions
