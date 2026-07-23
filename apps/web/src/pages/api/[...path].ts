@@ -109,10 +109,13 @@ app.post('/api/auth/register', async (c) => {
 });
 
 app.post('/api/auth/login', async (c) => {
-  const body = await c.req.json();
+  const body = await c.req.json().catch(() => ({}));
   const sql = c.get('sql');
   const lucia = c.get('lucia');
 
+  if (typeof body.email !== 'string' || typeof body.password !== 'string') {
+    return c.json({ error: 'Email atau password salah' }, 401);
+  }
   const [user] = await sql`SELECT id, email, hashed_password, role, nazhir_id FROM users WHERE email = ${body.email} LIMIT 1`;
   if (!user || !verifyPassword(body.password, user.hashed_password)) {
     return c.json({ error: 'Email atau password salah' }, 401);
