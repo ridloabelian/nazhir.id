@@ -413,7 +413,7 @@ app.post('/api/akuntansi/transaksi/create', async (c) => {
     : [];
   const totalDebit = baris.reduce((s: number, b: any) => s + b.debit, 0);
   const totalKredit = baris.reduce((s: number, b: any) => s + b.kredit, 0);
-  const perBarisValid = baris.every((b: any) => b.akunId && Number.isFinite(b.debit) && Number.isFinite(b.kredit) && ((b.debit > 0 && b.kredit === 0) || (b.kredit > 0 && b.debit === 0)));
+  const perBarisValid = baris.every((b: any) => b.akunId && Number.isInteger(b.debit) && Number.isInteger(b.kredit) && ((b.debit > 0 && b.kredit === 0) || (b.kredit > 0 && b.debit === 0)));
   if (baris.length < 2 || totalDebit !== totalKredit || totalDebit <= 0 || !perBarisValid) {
     return c.json({ error: 'Jurnal tidak balance atau baris tidak valid' }, 400);
   }

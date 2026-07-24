@@ -136,8 +136,8 @@ export default function AkuntansiDashboard({ role }: { role: string }) {
                   <option value="">Pilih akun</option>
                   {akun.map((a) => <option key={a.id} value={a.id}>{a.kode} — {a.nama}</option>)}
                 </select>
-                <input type="number" value={r.debit} onChange={(e) => setRow(i, { debit: e.target.value, kredit: e.target.value ? '' : r.kredit })} placeholder="Debit" className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200" />
-                <input type="number" value={r.kredit} onChange={(e) => setRow(i, { kredit: e.target.value, debit: e.target.value ? '' : r.debit })} placeholder="Kredit" className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200" />
+                <input type="number" min="0" step="1" value={r.debit} onChange={(e) => setRow(i, { debit: e.target.value, kredit: e.target.value ? '' : r.kredit })} placeholder="Debit" className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200" />
+                <input type="number" min="0" step="1" value={r.kredit} onChange={(e) => setRow(i, { kredit: e.target.value, debit: e.target.value ? '' : r.debit })} placeholder="Kredit" className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200" />
                 <button type="button" onClick={() => setRows(rows.filter((_, idx) => idx !== i))} className="rounded-lg bg-slate-800 text-slate-300">×</button>
               </div>
             ))}
