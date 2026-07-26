@@ -31,8 +31,8 @@ app.use('*', async (c, next) => {
   const cookieHeader = c.req.header('cookie') || '';
   const sessionId = cookieHeader
     .split(';')
-    .map(v => v.split('='))
-    .find(v => v[0].trim() === lucia.sessionCookieName)?.[1];
+    .map((v) => v.trim().split(/=(.*)/s))
+    .find((v) => v[0] === lucia.sessionCookieName)?.[1];
 
   if (sessionId) {
     try {
