@@ -2,10 +2,13 @@
 
 > Transformasi digital tata kelola wakaf Indonesia menuju Smart Nazhir Ecosystem 2030
 
+[![CI](https://github.com/ridloabelian/nazhir.id/actions/workflows/ci.yml/badge.svg)](https://github.com/ridloabelian/nazhir.id/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=flat&logo=cloudflare&logoColor=white)](https://cloudflare.com)
 [![Astro](https://img.shields.io/badge/Astro-BC52EE?style=flat&logo=astro&logoColor=white)](https://astro.build)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+
 
 ## Visi
 
